@@ -1,0 +1,233 @@
+---
+title: "Final project Part 1: Explore San Francisco International Airport Satisfaction Survey"
+author: "Nathan Miller, Eli Schultz, Shannon Takahata"
+date: "10/21/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+# East 6
+
+# Introduction
+Airport executives and state and local officials are curious about customer satisfaction at San Francisco International Airport.Identifying current strengths of the airport and areas for improvement are critical to increasing traffic and revenue. 
+
+A survey was administered to 3,234 participants in September 2010 and contains 100 different variables. The results contain two identifiers and mostly nominal and ordinal categorical variables. Nominal responses are for questions on topics such as airline, services used, comments grouped into areas of improvement or positive feedback, destination, and more. Ordinal responses cover levels of satisfaction on various areas or services, ease of use, and size of destination airport. A few binned numeric responses are also included, such as income, age, destination airport size, and time of flight. The only continuous variable is the weight assigned to each response by percent of passengers by terminal.
+
+# Data Description
+
+```{r, echo=FALSE, message= FALSE}
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(purrr)
+library(naniar)
+library(magrittr)
+library(readr)
+```
+```{r, echo=FALSE}
+SFOdata <-read.table("SFO_survey_withText.txt", header = TRUE, sep = "", quote = "\"", dec = ".", fill = TRUE, comment.char = "",strip.white=TRUE,stringsAsFactors = default.stringsAsFactors())
+
+UsefulWebFeatures <- read.csv("UsefulWebFeatures.csv")
+CommentForImprovement <- read.csv("Comment_For_Improvement.csv")
+```
+
+We first review the raw data.
+```{r}
+oldnames = c("Q6A",
+             "Q6B",
+             "Q6C",
+             "Q6D",
+             "Q6E",
+             "Q6F",
+             "Q6G",
+             "Q6H",
+             "Q6I",
+             "Q6J",
+             "Q6K",
+             "Q6L",
+             "Q6M",
+             "Q6N",
+             "Q7COM1",
+             "Q7COM2",
+             "Q7COM3",
+             "Q8A",
+             "Q8B",
+             "Q8C",
+             "Q8D",
+             "Q8E",
+             "Q8F",
+             "Q9",
+             "Q10",
+             "Q11",
+             "Q11A1",
+             "Q11A2",
+             "Q11A3",
+             "Q17",
+             "Q18",
+             "Q19",
+             "DESTMARK",
+             "DESTGEO")
+newnames = c("Artwork_and_exihibits_0_6",
+             "Restaurants_0_6",
+             "Retail_shops_0_6",
+             "Signs_and_directions_inside_SFO_0_6",
+             "Escalators_elevators_moving_walkways_0_6",
+             "Information_on_screen_monitors_0_6",
+             "Information_booths_lower_level_0_6",
+             "Information_booths_upper_level_0_6",
+             "Signs_and_directsion_on_roadways_0_6",
+             "Airport_parking_facilities_0_6",
+             "AirTrain_0_6",
+             "Long_term_parking_lot_shuttle_0_6",
+             "Airport_rental_car_center_0_6",
+             "CFO_Airport_as_a_whole_0_6",
+             "Com_For_Improve1",
+             "Com_For_Improve2",
+             "Com_For_Improve3",
+             "Cleanliness_Boarding_area_0_6",
+             "Cleanliness_Parking_Garage_0_6",
+             "Cleanliness_Airtrain_0_6",
+             "Cleanliness_Airport_rental_car_center_0_6",
+             "Cleanliness_Airport_Restaurants_0_6",
+             "Cleanliness_Restrooms_0_6",
+             "Safety_of_SFO_1_5",
+             "Used_website",
+             "Usefulness_of_website",
+             "Com_Useful_feature_of_website_1",
+             "Com_Useful_feature_of_website_2",
+             "Com_Useful_feature_of_website_3",
+             "Age",
+             "Gender",
+             "Income_code",
+             "Destination_Market",
+             "Destination_Geo_Loc")
+
+## Rename and recode comments for improvements and web features
+SelectedData <- SFOdata %>% 
+  rename_at(vars(all_of(oldnames)), ~ newnames) %>% 
+  select(all_of(newnames)) %>% 
+  left_join(CommentForImprovement, by = c("Com_For_Improve1" = "Key")) %>% 
+  mutate(Com_For_Improve1 = CommentForImprovement) %>% 
+  select(-CommentForImprovement) %>% 
+  left_join(CommentForImprovement, by = c("Com_For_Improve2" = "Key")) %>% 
+  mutate(Com_For_Improve2 = CommentForImprovement) %>% 
+  select(-CommentForImprovement) %>% 
+  left_join(CommentForImprovement, by = c("Com_For_Improve3" = "Key")) %>% 
+  mutate(Com_For_Improve3 = CommentForImprovement) %>% 
+  select(-CommentForImprovement) %>% 
+  left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_1" = "key")) %>% 
+  mutate(Com_Useful_feature_of_website_1 = WebFeature) %>% 
+  select(-WebFeature) %>% 
+  left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_2" = "key")) %>% 
+  mutate(Com_Useful_feature_of_website_2 = WebFeature) %>% 
+  select(-WebFeature) %>% 
+  left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_3" = "key")) %>% 
+  mutate(Com_Useful_feature_of_website_3 = WebFeature) %>% 
+  select(-WebFeature) %>% 
+  mutate(Gender = ifelse(Gender == 0, NA, Gender - 1))
+```
+
+We then look to see which variables have missing data.
+```{r}
+library(naniar)
+
+SelectedData %>% 
+  select(-starts_with("Com_"),-Usefulness_of_website) %>% 
+  vis_miss()
+```
+
+Only about 4% of our data appears to be missing. Now, there is a critical issue that we need to address in the encoding of the responses. For all the variables with 0-6 scale, the 0 represents blank values and the 6 represents non-applicable. Though not truly missing data in the sense that the data was lost or encoded incorrectly, these responses do not belong on the same scale as the 1-5 ratings. We will encode both of these responses as NA so they are not treated as on the same scale during analysis. 
+
+```{r}
+missing_encoded <- SelectedData %>% 
+  select(-starts_with("Com_"),-Usefulness_of_website) %>% 
+#  mutate_at( vars(ends_with("0_6")),~as.factor(.)) %>% 
+  mutate_at( vars(ends_with("0_6")),~car::recode(.,"6= NA;0= NA")) 
+
+missing_encoded %>% 
+  vis_miss()
+```
+
+We have about six times more missingness in this case. Again, it's likely because a lot of the question were not applicable such as Long_term_parking_lot_shuttle. However, now we can do a little summary statistics on the remainder.  
+
+```{r, warning = FALSE}
+means <- missing_encoded %>% 
+  select(ends_with("0_6")) %>% 
+  summarize_all(~mean(., na.rm = T))
+
+standard_dev <- missing_encoded %>% 
+  select(ends_with("0_6")) %>% 
+  summarize_all(~sd(., na.rm = T))
+
+mean_sd <- rbind(means,standard_dev)
+
+library(data.table)
+
+# transpose
+  means_t <- transpose(mean_sd)
+
+# get row and colnames in order
+  colnames(means_t) <-c("Means","standard_devs")
+  rownames(means_t) <- colnames(means)
+  
+means_t %>% 
+  arrange(Means)
+```
+
+So restaurants and shops are the worst attributes at SFO, while the general cleanliness is the best. This may be that people answered cleanliness on a different scale than other attributes, but it is something worth noting. 
+
+```{r, fig.width=15}
+missing_encoded %>% dplyr::select(ends_with("0_6")) %>%
+pivot_longer(cols = ends_with("0_6")) %>%
+#na.omit() %>%
+mutate(value = ifelse(value == 6, NA, value)) %>%
+ggplot(aes(x=as.factor(value))) +
+geom_histogram(stat = 'count') +
+facet_wrap(~name, nrow = 4) +
+xlab('Rating')
+```
+
+We can see that from the numerical values, some of the questions are (1) spread across positive and negative reviews (2) tend positive. Examples of each of these distributions are:
+
+1. Spread of responses: Artwork and exhibits, cleanliness of airport restaurants, and restaurants
+2. Tend to positive responses: airport parking facilities, cleanliness of airtrain, information booths (upper and lower)
+
+Are there any strong correlations in these ratings? 
+```{r,fig.height=10, fig.width=10}
+cor_m <- missing_encoded %>% 
+  select(ends_with("0_6")) %>% 
+  as.matrix() %>% 
+  ##Hmisc runs correlation with only removing pairwise NA, not dropping all prior to run
+  Hmisc::rcorr(type="pearson")
+
+  corrplot::corrplot(cor_m$r, method = 'color', order = 'alphabet')
+```
+We see some correlations between the Cleanliness measures in particular. Overall the ratings are generally positively correlated. 
+
+Let's do a quick check to determine whether any of the comments stand out as most frequent.
+```{r}
+SelectedData %>% dplyr::select(starts_with("Com_For_Improve")) %>%
+pivot_longer(cols = starts_with("Com_For_Improve")) %>%
+na.omit() %>%
+dplyr::select(-name) %>%
+table() %>%
+sort(decreasing = T) %>%
+.[0:10]
+```
+
+We have seen that in general signage and information appears to be the biggest issue with SFO, followed by issues with security and restaurant choices. 
+
+## Questions worth exploring
+Does the terminal impact ratings given by patrons? i.e. are certain terminals worse than others? 
+	
+Do passengers who use the website have less trouble navigating the airport or give more favorable ratings?
+	
+Do particular groups of passengers have more trouble with signage (one of the most commented issue areas) than others? i.e can accessibility be improved by identifying and targeting improvements for at risk groups. Possible variables to investigate: "Age", "Gender", "Income_code", "Destination_Market", "Destination_Geo_Loc"
+
+
+
+
+
+
+
+
