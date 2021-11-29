@@ -1,0 +1,433 @@
+---
+title: "Final Project Part 2"
+author: "Nathan Miller, Eli Schultz, Shannon Takahata"
+date: "11/26/2021"
+output: html_document
+---
+
+# East 6
+
+# Introduction
+Airport executives and state and local officials are curious about customer satisfaction at San Francisco International Airport.Identifying current strengths of the airport and areas for improvement are critical to increasing traffic and revenue. 
+
+A survey was administered to 3,234 participants in September 2010 and contains 100 different variables. The results contain two identifiers and mostly nominal and ordinal categorical variables. Nominal responses are for questions on topics such as airline, services used, comments grouped into areas of improvement or positive feedback, destination, and more. Ordinal responses cover levels of satisfaction on various areas or services, ease of use, and size of destination airport. A few binned numeric responses are also included, such as income, age, destination airport size, and time of flight. The only continuous variable is the weight assigned to each response by percent of passengers by terminal.
+
+# Part A
+
+```{r, echo=FALSE, message= FALSE}
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(purrr)
+library(naniar)
+library(magrittr)
+library(readr)
+```
+```{r, echo=FALSE}
+SFOdata <-read.table("SFO_survey_withText.txt", header = TRUE, sep = "", quote = "\"", dec = ".", fill = TRUE, comment.char = "",strip.white=TRUE,stringsAsFactors = default.stringsAsFactors())
+
+UsefulWebFeatures <- read.csv("UsefulWebFeatures.csv")
+CommentForImprovement <- read.csv("Comment_For_Improvement.csv")
+```
+```{r}
+oldnames = c("Q6A",
+             "Q6B",
+             "Q6C",
+             "Q6D",
+             "Q6E",
+             "Q6F",
+             "Q6G",
+             "Q6H",
+             "Q6I",
+             "Q6J",
+             "Q6K",
+             "Q6L",
+             "Q6M",
+             "Q6N",
+             "Q7COM1",
+             "Q7COM2",
+             "Q7COM3",
+             "Q8A",
+             "Q8B",
+             "Q8C",
+             "Q8D",
+             "Q8E",
+             "Q8F",
+             "Q9",
+             "Q10",
+             "Q11",
+             "Q11A1",
+             "Q11A2",
+             "Q11A3",
+             "Q17",
+             "Q18",
+             "Q19",
+             "DESTMARK",
+             "DESTGEO")
+newnames = c("Artwork_and_exihibits_0_6",
+             "Restaurants_0_6",
+             "Retail_shops_0_6",
+             "Signs_and_directions_inside_SFO_0_6",
+             "Escalators_elevators_moving_walkways_0_6",
+             "Information_on_screen_monitors_0_6",
+             "Information_booths_lower_level_0_6",
+             "Information_booths_upper_level_0_6",
+             "Signs_and_directsion_on_roadways_0_6",
+             "Airport_parking_facilities_0_6",
+             "AirTrain_0_6",
+             "Long_term_parking_lot_shuttle_0_6",
+             "Airport_rental_car_center_0_6",
+             "CFO_Airport_as_a_whole_0_6",
+             "Com_For_Improve1",
+             "Com_For_Improve2",
+             "Com_For_Improve3",
+             "Cleanliness_Boarding_area_0_6",
+             "Cleanliness_Parking_Garage_0_6",
+             "Cleanliness_Airtrain_0_6",
+             "Cleanliness_Airport_rental_car_center_0_6",
+             "Cleanliness_Airport_Restaurants_0_6",
+             "Cleanliness_Restrooms_0_6",
+             "Safety_of_SFO_1_5",
+             "Used_website",
+             "Usefulness_of_website",
+             "Com_Useful_feature_of_website_1",
+             "Com_Useful_feature_of_website_2",
+             "Com_Useful_feature_of_website_3",
+             "Age",
+             "Gender",
+             "Income_code",
+             "Destination_Market",
+             "Destination_Geo_Loc")
+
+## Rename and recode comments for improvements and web features
+SelectedData <- SFOdata %>% 
+  rename_at(vars(all_of(oldnames)), ~ newnames) %>% 
+  select(all_of(newnames)) %>% 
+  left_join(CommentForImprovement, by = c("Com_For_Improve1" = "Key")) %>% 
+  mutate(Com_For_Improve1 = CommentForImprovement) %>% 
+  select(-CommentForImprovement) %>% 
+  left_join(CommentForImprovement, by = c("Com_For_Improve2" = "Key")) %>% 
+  mutate(Com_For_Improve2 = CommentForImprovement) %>% 
+  select(-CommentForImprovement) %>% 
+  left_join(CommentForImprovement, by = c("Com_For_Improve3" = "Key")) %>% 
+  mutate(Com_For_Improve3 = CommentForImprovement) %>% 
+  select(-CommentForImprovement) %>% 
+  left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_1" = "key")) %>% 
+  mutate(Com_Useful_feature_of_website_1 = WebFeature) %>% 
+  select(-WebFeature) %>% 
+  left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_2" = "key")) %>% 
+  mutate(Com_Useful_feature_of_website_2 = WebFeature) %>% 
+  select(-WebFeature) %>% 
+  left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_3" = "key")) %>% 
+  mutate(Com_Useful_feature_of_website_3 = WebFeature) %>% 
+  select(-WebFeature) %>% 
+  mutate(Gender = ifelse(Gender == 0, NA, Gender - 1))
+```
+
+Encode missing data
+```{r}
+missing_encoded <- SelectedData %>% 
+  select(-starts_with("Com_"),-Usefulness_of_website) %>% 
+#  mutate_at( vars(ends_with("0_6")),~as.factor(.)) %>% 
+  mutate_at( vars(ends_with("0_6")),~car::recode(.,"6= NA;0= NA")) 
+```
+
+```{r}
+glimpse(missing_encoded)
+glimpse(SelectedData)
+```
+
+MAY NEED TO DO THIS Addressing missing data
+The clustering process has remove NA's as a step. This removed about 1000 rows. We would likely need to create values for all variables though, and it seemed like mice filed in the y variable based on the multiple x's. 
+```{r}
+library(psych)
+library(mice)
+```
+
+Created a subset of data with the overall customer satisfaction scores and the demographic variables.
+```{r}
+q1 <- missing_encoded %>% select(Age, Income_code, Gender, CFO_Airport_as_a_whole_0_6)
+```
+
+
+Created subset with overall customer satisfaction and satisfaction of the other airport aspects.
+```{r}
+q2 <- missing_encoded %>% select(Artwork_and_exihibits_0_6,Restaurants_0_6,Retail_shops_0_6,Signs_and_directions_inside_SFO_0_6,Escalators_elevators_moving_walkways_0_6,Information_on_screen_monitors_0_6,Information_booths_lower_level_0_6,Information_booths_upper_level_0_6,Signs_and_directsion_on_roadways_0_6,Airport_parking_facilities_0_6,AirTrain_0_6,Long_term_parking_lot_shuttle_0_6,Airport_rental_car_center_0_6, CFO_Airport_as_a_whole_0_6)
+```
+
+Created subset with customer satisfaction and comments
+```{r}
+q3 <- SFOdata %>% select(RESPNUM,contains("COM"))
+```
+
+
+Question #1: Customers were asked to rate their opinion of the "SFO Airport as a whole" on a scale from 1 ("unacceptable") to 5 ("outstanding"). The executives want to know if there are patterns across the satisfied or dissatisfied customers based on demographic characteristics, such as sex, age group, and income level.
+
+
+We can see how the individual demographics (age, income, gender) relate to the overall satisfaction.
+```{r}
+ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(Age))) +
+  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Satisfaction") + scale_fill_discrete(name = "Age")
+```
+As a note, 0=male and 1=female which differs slightly from the data dictionary. 
+```{r}
+ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(Gender))) +
+  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Satisfaction") + scale_fill_discrete(name = "Gender")
+```
+
+```{r}
+ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(Income_code))) +
+  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Satisfaction") + scale_fill_discrete(name = "Income")
+```
+
+Used clustering to determine how the customers are grouped.
+```{r}
+library(factoextra)
+library(cluster)
+library(mclust)
+library(tidyverse)
+library(NbClust)
+library(lavaan)
+```
+
+Determine how many clusters to use.
+```{r}
+q1 %>% scale() %>% na.omit() %>% fviz_nbclust(x = ., FUNcluster = kmeans, method = "gap")
+```
+
+Used the kmeans test. This test does not respond well to outliers.
+
+Partioning around medoids can circumvent outliers. However, since the data is based on 5 responses, there will not be any outliers.
+```{r}
+kmeansTest = kmeans(x = scale(na.omit(q1)), centers = 4)
+
+fviz_cluster(kmeansTest, scale(na.omit(q1)))
+```
+
+```{r}
+kmeansTest$centers
+```
+
+However, these centers are scaled. We look at the unscaled centers for further analysis.
+```{r}
+usedData = q1 %>%
+  na.omit() %>% 
+  scale()
+
+kmeansCenters = as.data.frame(kmeansTest$centers)
+
+varNames = names(kmeansCenters)
+
+unscaleCenters = function(varName) {
+  unscaled = kmeansCenters[, varName] * 
+    attr(x = usedData, which = "scaled:scale")[varName] + 
+    attr(x = usedData, which = "scaled:center")[varName]  
+  
+  res = data.frame(unscaled)
+  
+  names(res) = varName
+  
+  return(res)
+}
+
+clusterCentersRaw = lapply(varNames, function(x) unscaleCenters(x)) %>% 
+  bind_cols(.)
+clusterCentersRaw
+```
+
+
+We see that the clusters represent the different customers. 
+Cluster 1: 35-44, Around 75k, female, highly positive
+Cluster 2: 44-55, Around 150k, female, satisfactory
+Cluster 3: 25-35, Around 75k, male, highly positive
+Cluster 4: 45-54, Around 150k, male, satisfactory
+
+
+Question 2:
+The executives also want to know if customer satisfaction can be broken down into different attributes of the airport. Knowing this will help the team target specific strengths or areas of improvement. The central feature the customer satisfaction survey is a 14-question portion of the survey asking customers to rate satisfaction with different aspects of the airport (see Question 6 in the data directory). The executives want you to perform a quantitative analysis to determine if there are broad themes that emerge from this part of the survey.
+
+```{r}
+library(psych)
+library(lavaan)
+library(ggcorrplot)
+```
+
+The customer satisfaction by airport aspect can be seen as the following. 
+
+```{r}
+q2 %>% pivot_longer(cols = ends_with("0_6")) %>%
+#na.omit() %>%
+mutate(value = ifelse(value == 6, NA, value)) %>%
+ggplot(aes(x=as.factor(value))) +
+geom_histogram(stat = 'count') +
+facet_wrap(~name, nrow = 4) +
+xlab('Rating')
+```
+
+
+To see the broad themes among the responses, we can use factor analysis. Factor analysis can observe if there are any latent variables across these variables to contribute towards customer satisfaction.
+```{r}
+cortest.bartlett(q2)
+```
+
+```{r}
+KMO(q2)
+```
+
+We see that the p value from the barlett test is very small, so we reject the null hypothesis. The overall MSA is greater that 0.6. Therefore, it makes sense to perform factor analysis to combine the variables.
+
+
+We determine the number of factors. There are three triangles between the red lines.
+```{r}
+psych::fa.parallel(q2)
+```
+
+```{r}
+scree(q2)
+```
+We will use 3 factors moving forward.
+
+We then fit the model with no rotation.
+```{r}
+x2 <- fa(r = q2, nfactors = 3, rotate = "none")
+x2
+```
+
+For further analysis, I used oblique rotation since we want factors that are correlated.
+```{r}
+x3 <- fa(r = q2, nfactors = 3, rotate = "promax")
+x3
+```
+
+The first factor is related to restaurants, artwork, signs, escalations, and information booth. This could be associated with satisfaction  with signs and visual information. The second factor is related to roadways, parking, rental car, and airtrain. This could be associated with satisfaction with parking and transportation. The last factor relates to artwork, restaurants, and retail. This could be associated with the retail aspects of the airport.
+```{r}
+dat_loads <- x3$loadings
+dat_loads
+```
+
+```{r}
+scores <- factor.scores(q2,x3,method=c("Thurstone"))
+summary(scores$scores)
+```
+
+Question 3: 
+Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. The executives are not quite sure how to examine it without going through individual surveys one by one, but they want you to see if there are any concepts or insights that arise from these responses. Do the free responses relate to the findings in a) or b) at all?
+```{r}
+q3[ , 2:4 ][ q3[ , 2:4 ] == 1] <- "Food too expensive"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 2] <- "Shops/services too expensive"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 3] <- "Restaurants/food is good"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 4] <- "Shops are good"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 5] <- "Food is low quality/need better, more, or healthier selections"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 6] <- "Need better, more, or more unique restaurants"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 7] <- "Need better, more, or more unique shops"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 8] <- "Need restaurants/stores/clubs after security"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 9] <- "Need Starbucks/Peets/coffee house type restaurants (both before and after
+security)"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 10] <- "Need fast food/chain restaurants"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 11] <- "Shops/Restaurants need to be open more/not clean/not efficient"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 20] <- "Airport Layout-Terminals too far away/confusing/too difficult/takes too long to get around airport/no way to get between terminals after getting through security/domestic airlines in international terminal"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 21] <- "Better services/amenities in other terminals than in this one"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 22] <- "AC/Heat problems"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 23] <- "Moving walkways/escalators/elevators not working/not enough/need upgrading"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 24] <- "General cleanliness pos comment"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 25] <- "General cleanliness neg comment"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 26] <- "Positive comment about Airtrain"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 27] <- "Airtrain not convenient/slow/difficult to use/not enough seats"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 28] <- "Smoking areas-more needed/inconveniently located"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 29] <- "Restrooms-Not enough, not clean, missing amenities, too small, not enough hooks"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 30] <- "Facilities need upgrading/airport looks old/outdated"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 31] <- "Airport is crowded/More seating needed"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 32] <- "Baggage claim-Takes too long/hard to find/difficult to get to/disorganized"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 33] <- "Need better disabled access-ramps, carts"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 34] <- "Rental Car center too far away/difficult to get to/confusing/employees rude"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 35] <- "Parking too far away/not enough/hard to find /expensive"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 36] <- "Airport personnel positive comment"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 37] <- "Airport personnel negative comment"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 38] <- "Too many flight delays/bad weather/inefficient air traffic control"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 39] <- "Other Facilities Needed-children’s play areas, garden area, sleeping area,
+showers, business lounges, lockers, pet area, toiletries for sale in restrooms,
+food/water/soda vending machines, hot water/ice available everywhere"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 40] <- "General positive comments about SFO"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 41] <- "Need more duty-free rules/customs rules explained/improve dutyfree/customs experience"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 50] <- "Signage outside airport confusing/hard to get to airport/difficult to find
+correct terminal"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 51] <- "Signage inside airport confusing/small/hard to find gate or airline"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 52] <- "Need bilingual signs/announcements/personnel"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 53] <- "PA hard to understand/hear"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 54] <- "Information booth not staffed/personnel unhelpful/not knowledgeable"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 55] <- "Information screens-Too small/not enough/lack information/displays
+change too rapidly"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 56] <- "Signage to/from/on AirTrain/BART should be improved"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 57] <- "Add traffic delays/other information to flysfo.com to check before leaving"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 58] <- "Need information on transferring at the airport/what is OK to bring"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 59] <- "More humans/fewer electronic/automated signs"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 70] <- "Need more electrical outlets"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 71] <- "Need more artwork/exhibitions/change artwork more frequently"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 72] <- "Positive comment about artwork/exhibitions"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 73] <- "Wifi-not free long enough/difficult to access/doesn’t cover entire airport/overloaded/didn’t know was available"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 74] <- "Luggage carts-not enough/inconveniently located/should be free"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 75] <- "Need more entertainment- TV’s/Computers"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 76] <- "Need water fountains"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 77] <- "Other amenities-clocks, hand sanitizer, strollers, ATM’s, curbside check-in, payphone"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 78] <- "Positive comment about wifi"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 79] <- "Don’t like free speech booth/misleading/confusing"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 90] <- "Security/Customs lines/procedures long/inefficient/ineffective"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 91] <- "Security/Customs personnel inefficient/rude/not well trained"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 92] <- "Bart/ground transportation-Pos comment"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 93] <- "Bart/ground transportation Neg comment"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 94] <- "Airlines pos comment"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 95] <- "Airlines neg comment"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 96] <- "Positive comment about security"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 97] <- "Security should handle those with metal implants/pacemakers better"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 98] <- "Don’t appreciate people cutting in line/being allowed in front of me"
+q3[ , 2:4 ][ q3[ , 2:4 ] == 99] <- "Need more/other security measures (local security, more at night, cameras,
+lighting, etc.)"
+```
+```{r}
+q3[ , 5:7 ][ q3[ , 5:7 ] == 1] <- "Restaurant tables not clean"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 2] <- "Restaurant clean/well maintained"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 3] <- "Restroom dirty/not cleaned often enough/wet floor"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 4] <- "Restroom facilities need repair/refurbishment/don’t work properly"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 5] <- "Restroom clean/well maintained"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 6] <- "Dyson Dryers positive comment"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 7] <- "Dyson Dryers negative comment"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 8] <- "Boarding/Security area dirty/not well maintained"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 9] <- "Rental car center dirty"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 10] <- "Construction making things dirty"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 11] <- "Excessive trash/trash cans not emptied"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 12] <- "General positive comment"
+q3[ , 5:7 ][ q3[ , 5:7 ] == 13] <- "General negative comment"
+```
+
+```{r}
+q3[ , 8:11][ q3[ , 8:11] == 1] <- "Long/slow/crowded/confusing security"
+q3[ , 8:11][ q3[ , 8:11] == 2] <- "Security was efficient/fine/good/personnel competent/friendly"
+q3[ , 8:11][ q3[ , 8:11] == 3] <- "Security personnel were good/tried to get those with earlier flights through"
+q3[ , 8:11][ q3[ , 8:11] == 4] <- "People jumped ahead of us because of procedures/resented having to wait
+longer while those in back of us went ahead"
+q3[ , 8:11][ q3[ , 8:11] == 5] <- "Racial/other profiling/felt harassed by security personnel"
+q3[ , 8:11][ q3[ , 8:11] == 6] <- "Security understaffed/not enough lanes open"
+q3[ , 8:11][ q3[ , 8:11] == 7] <- "Couldn’t find airline/gate/facility"
+q3[ , 8:11][ q3[ , 8:11] == 8] <- "Signage in boarding area poor quality/confusing/insufficient"
+q3[ , 8:11][ q3[ , 8:11] == 9] <- "Security can be cumbersome, but it’s necessary – don’t mind the procedure so much"
+q3[ , 8:11][ q3[ , 8:11] == 10] <- "Could have used better signage/clear signs on what can/cannot be brought through security"
+q3[ , 8:11][ q3[ , 8:11] == 11] <- "Tough to navigate security/walk to gate because of disability/impairment"
+q3[ , 8:11][ q3[ , 8:11] == 12] <- "Security personnel unprofessional/rude/not knowledgeable"
+q3[ , 8:11][ q3[ , 8:11] == 13] <- "Security procedures ineffective/cumbersome/illogical/too invasive"
+q3[ , 8:11][ q3[ , 8:11] == 14] <- "Security was quicker/easier for me than for others (airport/terminal/first class)"
+q3[ , 8:11][ q3[ , 8:11] == 15] <- "General negative comment"
+q3[ , 8:11][ q3[ , 8:11] == 16] <- "General positive comment"
+```
+
+
+```{r}
+q3 %>% 
+  unnest_tokens(word, correctedStatements) %>% 
+  anti_join(stop_words) %>% 
+  count(word, sort = TRUE) %>% 
+  filter(n > 25) %>% 
+  na.omit() %>% 
+  wordcloud2(shape = "cardioid")
+```
+
+
