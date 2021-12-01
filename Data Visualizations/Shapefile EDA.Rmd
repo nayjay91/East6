@@ -27,7 +27,8 @@ logs_311_df <- read.csv("Data/311_Phone_Call_Log_Mod.csv")
 
 #311 files do not contain geographical information. 
 
-business_licenses_df <- read.csv("Data/Business_Licenses_geocoded.csv")
+business_licenses_df <- read.csv("Data/Business_Licenses_geocoded.csv")%>% 
+  st_as_sf(coords = c("X","Y"))
 
 #business licenses uses x/y instead of lat/lon
 
@@ -42,14 +43,17 @@ street_lights_df <- read.csv("Data/Street_lights.csv") %>%
 ```
 
 ```{r}
-View(contacts_311_df)
+pal_park <- colorFactor(palette = 'Set2', domain =plf_df2$Park_Type)
+pal_school <- colorFactor(palette = "Set4", domain = dat$SchoolType)
 
-#business licesnses uses x/y instead of lat/lon
+
+plf_df2$popup <- paste("<b>",plf_df2$Park_Name,"</b><br>",
+                                  "Type: ",plf_df2$Park_Type,sep ="")
+dat$popup <- paste("<b>",dat$School,"</b><br>",
+                                  "Type: ",dat$SchoolType,sep ="")
+
+leaflet()  %>%
+  addTiles()  %>%
+  addCircleMarkers(data = business_licenses_df, stroke = 0, fillOpacity = 1, radius = 4) 
 ```
-
-```{r}
-apiKey <- "AIzaSyDrSGTD9eIZMJnh4YRAgpS40dx4m3qjbkE"
-register_google(key = apiKey)
-```
-
 
