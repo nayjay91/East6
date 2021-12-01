@@ -25,13 +25,31 @@ contacts_311_df <- read.csv("Data/311_Contact_Management_Cases.csv")
 
 logs_311_df <- read.csv("Data/311_Phone_Call_Log_Mod.csv")
 
+#311 files do not contain geographical information. 
+
 business_licenses_df <- read.csv("Data/Business_Licenses_geocoded.csv")
 
-parks_df <-  read.csv("Data/Parks_Location_and_Features.csv")
+#business licenses uses x/y instead of lat/lon
 
-public_facilities_df <- read.csv("Data/Public_Facilities.csv")
+parks_df <- read.csv("Data/Parks_Locations_and_Features.csv") %>% 
+  st_as_sf(coords = c("Lon","Lat"))
 
-street_lights_df <- read.csv("Data/Street_lights.csv")
+public_facilities_df <- read.csv("Data/Public_Facilities.csv") %>% 
+  st_as_sf(coords = c("Lon","Lat"))
+
+street_lights_df <- read.csv("Data/Street_lights.csv") %>% 
+  st_as_sf(coords = c("Lon","Lat"))
+```
+
+```{r}
+View(contacts_311_df)
+
+#business licesnses uses x/y instead of lat/lon
+```
+
+```{r}
+apiKey <- "AIzaSyDrSGTD9eIZMJnh4YRAgpS40dx4m3qjbkE"
+register_google(key = apiKey)
 ```
 
 
