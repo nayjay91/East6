@@ -42,18 +42,42 @@ street_lights_df <- read.csv("Data/Street_lights.csv") %>%
   st_as_sf(coords = c("Lon","Lat"))
 ```
 
+
+# business licenses
 ```{r}
-pal_park <- colorFactor(palette = 'Set2', domain =plf_df2$Park_Type)
-pal_school <- colorFactor(palette = "Set4", domain = dat$SchoolType)
+table(business_licenses_df$Classifi_1)
+#maybe we should consider some way of categorizing and redusing the number of businesses classified here. Could have a selection pane for each type of business license. 
+#food
+#shopping
+#entertainment
+#service
+```
 
 
-plf_df2$popup <- paste("<b>",plf_df2$Park_Name,"</b><br>",
-                                  "Type: ",plf_df2$Park_Type,sep ="")
-dat$popup <- paste("<b>",dat$School,"</b><br>",
-                                  "Type: ",dat$SchoolType,sep ="")
+```{r}
+pal_business <- colorFactor(palette = 'Set2', domain = business_licenses_df$Classifi_1)
+business_licenses_df$popup <- paste("<b>",business_licenses_df$Business_N,"</b><br>",
+                                  "Type: ",business_licenses_df$Classifi_1,sep ="")
 
 leaflet()  %>%
   addTiles()  %>%
-  addCircleMarkers(data = business_licenses_df, stroke = 0, fillOpacity = 1, radius = 4) 
+  addCircleMarkers(data = business_licenses_df,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4) 
+```
+# Abandoned Properties
+
+```{r}
+View(abandoned_properties)
+```
+
+```{r}
+
+#did not finish this section
+pal_abandoned <- colorFactor(palette = 'Set2', domain = abandoned_properties$Outcome_St)
+business_licenses_df$popup <- paste("<b>",business_licenses_df$Business_N,"</b><br>",
+                                  "Type: ",business_licenses_df$Classifi_1,sep ="")
+
+leaflet()  %>%
+  addTiles()  %>%
+  addCircleMarkers(data = business_licenses_df,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4)
 ```
 
