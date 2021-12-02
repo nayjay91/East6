@@ -78,6 +78,51 @@ business_licenses_df$popup <- paste("<b>",business_licenses_df$Business_N,"</b><
 
 leaflet()  %>%
   addTiles()  %>%
-  addCircleMarkers(data = business_licenses_df,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4)
+  addCircleMarkers(data = pal_abandoned,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4)
 ```
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  addPolygons(data = census) %>% 
+  addPolygons(data = city_council_dist, color = 'red')
+```
+
+```{r}
+
+# Convert Census CRS to WGS84
+census_transformed <- census %>% 
+  select(geometry, GEOID, ALAND, SE_T001_00) %>% # Add relevant census metrics... 
+  st_transform(crs = st_crs(city_council_dist))
+
+
+sf::sf_use_s2(FALSE) # reformat CRS to fix?? 
+# Set Buffer = 0 to fix city council topology
+city_council_dist2 <- sf::st_buffer(city_council_dist, dist = 0)
+sf::sf_use_s2(TRUE)
+
+
+intrsct <- sf::st_intersection(city_council_dist2, census_transformed) %>% 
+  mutate(in_area = units::drop_units(st_area(.))) %>% 
+  ### Calc proportional census data
+  mutate(pop = SE_T001_00 * in_area / ALAND) %>% 
+  group_by(OBJECTID, Dist, Council_Me) %>% 
+  summarise(pop = sum(pop))
+  
+```
+
+```{r}
+ggplot() +
+    geom_sf(data = intrsct, aes(fill = pop), alpha = .5, lwd = .25) +
+    scale_fill_gradient(trans = "log10", 
+                        low = "white",
+                        high = "firebrick",
+                        labels = scales::comma_format())
+```
+
+
+
+
+
+
 
