@@ -481,12 +481,23 @@ q3 %>%
 ```{r}
 SelectedData$Comments_For_Improvement_Txt
 
+custom_stop_words <- c("General", 
+                       "positive", 
+                       "negative",
+                       "comments", 
+                       "about", 
+                       "SFO",
+                       "airport",
+                       "Airlines",
+                       "neg",
+                       "comment")
+
 df_text <- textProcessor(documents = missing_encoded$Comments_For_Improvement_Txt, 
                            metadata = missing_encoded, 
                            onlycharacter = TRUE,
                            customstopwords = c(tm::stopwords("SMART"), 
                                                tm::stopwords("en"),
-                                               "airport"))
+                                               custom_stop_words))
 
 df_Prep <-  prepDocuments(documents = df_text$documents, 
                                vocab = df_text$vocab,
@@ -509,8 +520,8 @@ topics <-  stm(documents = df_Prep$documents,
 ```
 
 ```{r}
-plot(topic)
-labelTopics(topic)
+plot(topics)
+labelTopics(topics)
 ```
 
 
