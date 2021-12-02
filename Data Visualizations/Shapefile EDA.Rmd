@@ -104,7 +104,7 @@ sf::sf_use_s2(TRUE)
 
 intrsct <- sf::st_intersection(city_council_dist2, census_transformed) %>% 
   mutate(in_area = units::drop_units(st_area(.))) %>% 
-  ### Calc proportional census data
+  ### Calc proportional census data based on area of intersection 
   mutate(pop = SE_T001_00 * in_area / ALAND) %>% 
   group_by(OBJECTID, Dist, Council_Me) %>% 
   summarise(pop = sum(pop))
