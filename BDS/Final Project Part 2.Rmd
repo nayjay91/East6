@@ -8,7 +8,8 @@ output: html_document
 # East 6
 
 # Introduction
-Airport executives and state and local officials are curious about customer satisfaction at San Francisco International Airport.Identifying current strengths of the airport and areas for improvement are critical to increasing traffic and revenue. 
+
+Airport executives and state and local officials are curious about customer satisfaction at San Francisco International Airport.Identifying current strengths of the airport and areas for improvement are critical to increasing traffic and revenue.
 
 A survey was administered to 3,234 participants in September 2010 and contains 100 different variables. The results contain two identifiers and mostly nominal and ordinal categorical variables. Nominal responses are for questions on topics such as airline, services used, comments grouped into areas of improvement or positive feedback, destination, and more. Ordinal responses cover levels of satisfaction on various areas or services, ease of use, and size of destination airport. A few binned numeric responses are also included, such as income, age, destination airport size, and time of flight. The only continuous variable is the weight assigned to each response by percent of passengers by terminal.
 
@@ -23,12 +24,14 @@ library(naniar)
 library(magrittr)
 library(readr)
 ```
+
 ```{r, echo=FALSE}
 SFOdata <-read.table("SFO_survey_withText.txt", header = TRUE, sep = "", quote = "\"", dec = ".", fill = TRUE, comment.char = "",strip.white=TRUE,stringsAsFactors = default.stringsAsFactors())
 
 UsefulWebFeatures <- read.csv("UsefulWebFeatures.csv")
 CommentForImprovement <- read.csv("Comment_For_Improvement.csv")
 ```
+
 ```{r}
 oldnames = c("Q6A",
              "Q6B",
@@ -63,7 +66,8 @@ oldnames = c("Q6A",
              "Q18",
              "Q19",
              "DESTMARK",
-             "DESTGEO")
+             "DESTGEO",
+             "Q7_text_All")
 newnames = c("Artwork_and_exihibits_0_6",
              "Restaurants_0_6",
              "Retail_shops_0_6",
@@ -97,7 +101,8 @@ newnames = c("Artwork_and_exihibits_0_6",
              "Gender",
              "Income_code",
              "Destination_Market",
-             "Destination_Geo_Loc")
+             "Destination_Geo_Loc",
+             "Comments_For_Improvement_Txt")
 
 ## Rename and recode comments for improvements and web features
 SelectedData <- SFOdata %>% 
@@ -125,6 +130,7 @@ SelectedData <- SFOdata %>%
 ```
 
 Encode missing data
+
 ```{r}
 missing_encoded <- SelectedData %>% 
   select(-starts_with("Com_"),-Usefulness_of_website) %>% 
@@ -137,39 +143,62 @@ glimpse(missing_encoded)
 glimpse(SelectedData)
 ```
 
-MAY NEED TO DO THIS Addressing missing data
-The clustering process has remove NA's as a step. This removed about 1000 rows. We would likely need to create values for all variables though, and it seemed like mice filed in the y variable based on the multiple x's. 
+MAY NEED TO DO THIS Addressing missing data The clustering process has remove NA's as a step. This removed about 1000 rows. We would likely need to create values for all variables though, and it seemed like mice filed in the y variable based on the multiple x's.
+
 ```{r}
 library(psych)
 library(mice)
 ```
 
 Created a subset of data with the overall customer satisfaction scores and the demographic variables.
+
 ```{r}
-q1 <- missing_encoded %>% select(Age, Income_code, Gender, CFO_Airport_as_a_whole_0_6)
+q1 <- missing_encoded %>% 
+  select(Age, 
+         Income_code, 
+         Gender, 
+         CFO_Airport_as_a_whole_0_6)
 ```
 
-
 Created subset with overall customer satisfaction and satisfaction of the other airport aspects.
+
 ```{r}
-q2 <- missing_encoded %>% select(Artwork_and_exihibits_0_6,Restaurants_0_6,Retail_shops_0_6,Signs_and_directions_inside_SFO_0_6,Escalators_elevators_moving_walkways_0_6,Information_on_screen_monitors_0_6,Information_booths_lower_level_0_6,Information_booths_upper_level_0_6,Signs_and_directsion_on_roadways_0_6,Airport_parking_facilities_0_6,AirTrain_0_6,Long_term_parking_lot_shuttle_0_6,Airport_rental_car_center_0_6, CFO_Airport_as_a_whole_0_6)
+q2 <- missing_encoded %>% 
+  select(Artwork_and_exihibits_0_6,
+         Restaurants_0_6,
+         Retail_shops_0_6,
+         Signs_and_directions_inside_SFO_0_6,
+         Escalators_elevators_moving_walkways_0_6,
+         Information_on_screen_monitors_0_6,
+         Information_booths_lower_level_0_6,
+         Information_booths_upper_level_0_6,
+         Signs_and_directsion_on_roadways_0_6,
+         Airport_parking_facilities_0_6,
+         AirTrain_0_6,
+         Long_term_parking_lot_shuttle_0_6,
+         Airport_rental_car_center_0_6, 
+         CFO_Airport_as_a_whole_0_6)
 ```
 
 Created subset with customer satisfaction and comments
+
 ```{r}
 q3 <- SFOdata %>% select(RESPNUM,contains("COM"))
 ```
 
+## Question 1
 
-Question #1: Customers were asked to rate their opinion of the "SFO Airport as a whole" on a scale from 1 ("unacceptable") to 5 ("outstanding"). The executives want to know if there are patterns across the satisfied or dissatisfied customers based on demographic characteristics, such as sex, age group, and income level.
-
+Customers were asked to rate their opinion of the "SFO Airport as a whole" on a scale from 1 ("unacceptable") to 5 ("outstanding"). The executives want to know if there are patterns across the satisfied or dissatisfied customers based on demographic characteristics, such as sex, age group, and income level.
 
 We can see how the individual demographics (age, income, gender) relate to the overall satisfaction.
+
 ```{r}
 ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(Age))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Satisfaction") + scale_fill_discrete(name = "Age")
 ```
-As a note, 0=male and 1=female which differs slightly from the data dictionary. 
+
+As a note, 0=male and 1=female which differs slightly from the data dictionary.
+
 ```{r}
 ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(Gender))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Satisfaction") + scale_fill_discrete(name = "Gender")
@@ -181,7 +210,8 @@ ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(I
 ```
 
 Used clustering to determine how the customers are grouped.
-```{r}
+
+```{r,message = F}
 library(factoextra)
 library(cluster)
 library(mclust)
@@ -191,15 +221,20 @@ library(lavaan)
 ```
 
 Determine how many clusters to use.
+
 ```{r}
-q1 %>% scale() %>% na.omit() %>% fviz_nbclust(x = ., FUNcluster = kmeans, method = "gap")
+q1 %>% 
+  scale() %>% 
+  na.omit() %>% 
+  fviz_nbclust(x = ., FUNcluster = kmeans, method = "gap")
 ```
 
 Used the kmeans test. This test does not respond well to outliers.
 
 Partioning around medoids can circumvent outliers. However, since the data is based on 5 responses, there will not be any outliers.
+
 ```{r}
-kmeansTest = kmeans(x = scale(na.omit(q1)), centers = 4)
+kmeansTest <-  kmeans(x = scale(na.omit(q1)), centers = 4)
 
 fviz_cluster(kmeansTest, scale(na.omit(q1)))
 ```
@@ -209,16 +244,17 @@ kmeansTest$centers
 ```
 
 However, these centers are scaled. We look at the unscaled centers for further analysis.
+
 ```{r}
-usedData = q1 %>%
+usedData <-  q1 %>%
   na.omit() %>% 
   scale()
 
-kmeansCenters = as.data.frame(kmeansTest$centers)
+kmeansCenters <- as.data.frame(kmeansTest$centers)
 
-varNames = names(kmeansCenters)
+varNames <-  names(kmeansCenters)
 
-unscaleCenters = function(varName) {
+unscaleCenters <-  function(varName) {
   unscaled = kmeansCenters[, varName] * 
     attr(x = usedData, which = "scaled:scale")[varName] + 
     attr(x = usedData, which = "scaled:center")[varName]  
@@ -230,21 +266,15 @@ unscaleCenters = function(varName) {
   return(res)
 }
 
-clusterCentersRaw = lapply(varNames, function(x) unscaleCenters(x)) %>% 
+clusterCentersRaw <-  lapply(varNames, function(x) unscaleCenters(x)) %>% 
   bind_cols(.)
-clusterCentersRaw
+clusterCentersRaw %>% 
+ mutate_if(is.numeric, round, digits = 2)
 ```
 
+We see that the clusters represent the different customers. Cluster 1: 35-44, Around 75k, female, highly positive Cluster 2: 44-55, Around 150k, female, satisfactory Cluster 3: 25-35, Around 75k, male, highly positive Cluster 4: 45-54, Around 150k, male, satisfactory
 
-We see that the clusters represent the different customers. 
-Cluster 1: 35-44, Around 75k, female, highly positive
-Cluster 2: 44-55, Around 150k, female, satisfactory
-Cluster 3: 25-35, Around 75k, male, highly positive
-Cluster 4: 45-54, Around 150k, male, satisfactory
-
-
-Question 2:
-The executives also want to know if customer satisfaction can be broken down into different attributes of the airport. Knowing this will help the team target specific strengths or areas of improvement. The central feature the customer satisfaction survey is a 14-question portion of the survey asking customers to rate satisfaction with different aspects of the airport (see Question 6 in the data directory). The executives want you to perform a quantitative analysis to determine if there are broad themes that emerge from this part of the survey.
+Question 2: The executives also want to know if customer satisfaction can be broken down into different attributes of the airport. Knowing this will help the team target specific strengths or areas of improvement. The central feature the customer satisfaction survey is a 14-question portion of the survey asking customers to rate satisfaction with different aspects of the airport (see Question 6 in the data directory). The executives want you to perform a quantitative analysis to determine if there are broad themes that emerge from this part of the survey.
 
 ```{r}
 library(psych)
@@ -252,7 +282,7 @@ library(lavaan)
 library(ggcorrplot)
 ```
 
-The customer satisfaction by airport aspect can be seen as the following. 
+The customer satisfaction by airport aspect can be seen as the following.
 
 ```{r}
 q2 %>% pivot_longer(cols = ends_with("0_6")) %>%
@@ -264,8 +294,8 @@ facet_wrap(~name, nrow = 4) +
 xlab('Rating')
 ```
 
-
 To see the broad themes among the responses, we can use factor analysis. Factor analysis can observe if there are any latent variables across these variables to contribute towards customer satisfaction.
+
 ```{r}
 cortest.bartlett(q2)
 ```
@@ -276,8 +306,8 @@ KMO(q2)
 
 We see that the p value from the barlett test is very small, so we reject the null hypothesis. The overall MSA is greater that 0.6. Therefore, it makes sense to perform factor analysis to combine the variables.
 
-
 We determine the number of factors. There are three triangles between the red lines.
+
 ```{r}
 psych::fa.parallel(q2)
 ```
@@ -285,21 +315,29 @@ psych::fa.parallel(q2)
 ```{r}
 scree(q2)
 ```
+
 We will use 3 factors moving forward.
 
 We then fit the model with no rotation.
+
 ```{r}
 x2 <- fa(r = q2, nfactors = 3, rotate = "none")
 x2
 ```
 
 For further analysis, I used oblique rotation since we want factors that are correlated.
+
 ```{r}
 x3 <- fa(r = q2, nfactors = 3, rotate = "promax")
 x3
 ```
 
-The first factor is related to restaurants, artwork, signs, escalations, and information booth. This could be associated with satisfaction  with signs and visual information. The second factor is related to roadways, parking, rental car, and airtrain. This could be associated with satisfaction with parking and transportation. The last factor relates to artwork, restaurants, and retail. This could be associated with the retail aspects of the airport.
+The first factor is related to restaurants, artwork, signs, escalations, and information booth. This could be associated with satisfaction with signs and visual information. 
+
+The second factor is related to roadways, parking, rental car, and airtrain. This could be associated with satisfaction with parking and transportation. 
+
+The last factor relates to artwork, restaurants, and retail. This could be associated with the retail aspects of the airport.
+
 ```{r}
 dat_loads <- x3$loadings
 dat_loads
@@ -310,8 +348,8 @@ scores <- factor.scores(q2,x3,method=c("Thurstone"))
 summary(scores$scores)
 ```
 
-Question 3: 
-Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. The executives are not quite sure how to examine it without going through individual surveys one by one, but they want you to see if there are any concepts or insights that arise from these responses. Do the free responses relate to the findings in a) or b) at all?
+Question 3: Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. The executives are not quite sure how to examine it without going through individual surveys one by one, but they want you to see if there are any concepts or insights that arise from these responses. Do the free responses relate to the findings in a) or b) at all?
+
 ```{r}
 q3[ , 2:4 ][ q3[ , 2:4 ] == 1] <- "Food too expensive"
 q3[ , 2:4 ][ q3[ , 2:4 ] == 2] <- "Shops/services too expensive"
@@ -383,6 +421,7 @@ q3[ , 2:4 ][ q3[ , 2:4 ] == 98] <- "Don’t appreciate people cutting in line/be
 q3[ , 2:4 ][ q3[ , 2:4 ] == 99] <- "Need more/other security measures (local security, more at night, cameras,
 lighting, etc.)"
 ```
+
 ```{r}
 q3[ , 5:7 ][ q3[ , 5:7 ] == 1] <- "Restaurant tables not clean"
 q3[ , 5:7 ][ q3[ , 5:7 ] == 2] <- "Restaurant clean/well maintained"
@@ -419,7 +458,6 @@ q3[ , 8:11][ q3[ , 8:11] == 15] <- "General negative comment"
 q3[ , 8:11][ q3[ , 8:11] == 16] <- "General positive comment"
 ```
 
-
 ```{r}
 q3 %>% 
   unnest_tokens(word, correctedStatements) %>% 
@@ -429,5 +467,3 @@ q3 %>%
   na.omit() %>% 
   wordcloud2(shape = "cardioid")
 ```
-
-
