@@ -15,6 +15,8 @@ A survey was administered to 3,234 participants in September 2010 and contains 1
 
 # Part A
 
+## Data Wrangling 
+
 ```{r, echo=FALSE, message= FALSE}
 library(dplyr)
 library(tidyverse)
@@ -107,7 +109,7 @@ newnames = c("Artwork_and_exihibits_0_6",
 ## Rename and recode comments for improvements and web features
 SelectedData <- SFOdata %>% 
   rename_at(vars(all_of(oldnames)), ~ newnames) %>% 
-  select(all_of(newnames)) %>% 
+  select(all_of(newnames), RESPNUM) %>% 
   left_join(CommentForImprovement, by = c("Com_For_Improve1" = "Key")) %>% 
   mutate(Com_For_Improve1 = CommentForImprovement) %>% 
   select(-CommentForImprovement) %>% 
@@ -274,7 +276,9 @@ clusterCentersRaw %>%
 
 We see that the clusters represent the different customers. Cluster 1: 35-44, Around 75k, female, highly positive Cluster 2: 44-55, Around 150k, female, satisfactory Cluster 3: 25-35, Around 75k, male, highly positive Cluster 4: 45-54, Around 150k, male, satisfactory
 
-Question 2: The executives also want to know if customer satisfaction can be broken down into different attributes of the airport. Knowing this will help the team target specific strengths or areas of improvement. The central feature the customer satisfaction survey is a 14-question portion of the survey asking customers to rate satisfaction with different aspects of the airport (see Question 6 in the data directory). The executives want you to perform a quantitative analysis to determine if there are broad themes that emerge from this part of the survey.
+## Question 2
+
+The executives also want to know if customer satisfaction can be broken down into different attributes of the airport. Knowing this will help the team target specific strengths or areas of improvement. The central feature the customer satisfaction survey is a 14-question portion of the survey asking customers to rate satisfaction with different aspects of the airport (see Question 6 in the data directory). The executives want you to perform a quantitative analysis to determine if there are broad themes that emerge from this part of the survey.
 
 ```{r}
 library(psych)
@@ -348,7 +352,9 @@ scores <- factor.scores(q2,x3,method=c("Thurstone"))
 summary(scores$scores)
 ```
 
-Question 3: Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. The executives are not quite sure how to examine it without going through individual surveys one by one, but they want you to see if there are any concepts or insights that arise from these responses. Do the free responses relate to the findings in a) or b) at all?
+## Question 3
+
+Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. The executives are not quite sure how to examine it without going through individual surveys one by one, but they want you to see if there are any concepts or insights that arise from these responses. Do the free responses relate to the findings in a) or b) at all?
 
 ```{r}
 q3[ , 2:4 ][ q3[ , 2:4 ] == 1] <- "Food too expensive"
@@ -459,11 +465,54 @@ q3[ , 8:11][ q3[ , 8:11] == 16] <- "General positive comment"
 ```
 
 ```{r}
+library(wordcloud2)
+
 q3 %>% 
-  unnest_tokens(word, correctedStatements) %>% 
+  pivot_longer(cols = -RESPNUM) %>% 
+  na.omit() %>% 
+  unnest_tokens(word, value) %>% 
   anti_join(stop_words) %>% 
   count(word, sort = TRUE) %>% 
   filter(n > 25) %>% 
   na.omit() %>% 
   wordcloud2(shape = "cardioid")
 ```
+### Topic Model
+```{r}
+SelectedData$Comments_For_Improvement_Txt
+
+df_text <- textProcessor(documents = missing_encoded$Comments_For_Improvement_Txt, 
+                           metadata = missing_encoded, 
+                           onlycharacter = TRUE,
+                           customstopwords = c(tm::stopwords("SMART"), 
+                                               tm::stopwords("en")))
+
+df_Prep <-  prepDocuments(documents = df_text$documents, 
+                               vocab = df_text$vocab,
+                               meta = df_text$meta)
+
+kTest <- searchK(documents = df_Prep$documents, 
+             vocab = df_Prep$vocab, 
+             K = c(3, 4, 5, 10, 20, 25, 35),
+             verbose = F,
+             max.em.its = 200)
+
+plot(kTest)
+```
+```{r}
+topics <-  stm(documents = df_Prep$documents, 
+             vocab = df_Prep$vocab, 
+             K = 10, #change this to whatever the plot shows best
+             verbose = F,
+             max.em.its = 200)
+```
+
+```{r}
+plot(topic)
+labelTopics(topic)
+```
+
+
+# Part B
+Do particular groups of passengers have more trouble with signage (one of the most commented issue areas) than others? i.e can accessibility be improved by identifying and targeting improvements for at risk groups. Possible variables to investigate: "Age", "Gender", "Income_code", "Destination_Market", "Destination_Geo_Loc"
+
