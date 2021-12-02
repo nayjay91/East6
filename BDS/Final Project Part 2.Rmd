@@ -471,7 +471,7 @@ q3 %>%
   pivot_longer(cols = -RESPNUM) %>% 
   na.omit() %>% 
   unnest_tokens(word, value) %>% 
-  anti_join(stop_words) %>% 
+  anti_join(c(stop_words, "airport")) %>% 
   count(word, sort = TRUE) %>% 
   filter(n > 25) %>% 
   na.omit() %>% 
@@ -485,7 +485,8 @@ df_text <- textProcessor(documents = missing_encoded$Comments_For_Improvement_Tx
                            metadata = missing_encoded, 
                            onlycharacter = TRUE,
                            customstopwords = c(tm::stopwords("SMART"), 
-                                               tm::stopwords("en")))
+                                               tm::stopwords("en"),
+                                               "airport"))
 
 df_Prep <-  prepDocuments(documents = df_text$documents, 
                                vocab = df_text$vocab,
@@ -493,7 +494,7 @@ df_Prep <-  prepDocuments(documents = df_text$documents,
 
 kTest <- searchK(documents = df_Prep$documents, 
              vocab = df_Prep$vocab, 
-             K = c(3, 4, 5, 10, 20, 25, 35),
+             K = c(3, 5, 10, 20, 35),
              verbose = F,
              max.em.its = 200)
 
@@ -502,7 +503,7 @@ plot(kTest)
 ```{r}
 topics <-  stm(documents = df_Prep$documents, 
              vocab = df_Prep$vocab, 
-             K = 10, #change this to whatever the plot shows best
+             K = 5, #change this to whatever the plot shows best
              verbose = F,
              max.em.its = 200)
 ```
