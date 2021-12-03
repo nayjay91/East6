@@ -42,6 +42,27 @@ street_lights_df <- read.csv("Data/Street_lights.csv") %>%
   st_as_sf(coords = c("Lon","Lat"))
 ```
 
+```{r}
+### Add Var names to relevant Census columns 
+census <- census %>% 
+  dplyr::rename(Population = SE_T001_00,
+                age_u5 = SE_T008_02,
+                age_5_9 = SE_T008_03,
+                age_11_14 = SE_T008_04,
+                age_15_17 = SE_T008_05,
+                age_18_24 = SE_T008_06,
+                age_25_34 = SE_T008_07,
+                age_35_44 = SE_T008_08,
+                age_45_54 = SE_T008_09,
+                age_55_64 = SE_T008_10,
+                age_65_74 = SE_T008_11,
+                age_75_84 = SE_T008_12,
+                occupied_houses = SE_T069_01, 
+                owner_occupied = SE_T069_02) %>% 
+  dplyr::mutate(renter_occupied = occupied_houses - owner_occupied)
+
+```
+
 
 # business licenses
 ```{r}
@@ -51,6 +72,19 @@ table(business_licenses_df$Classifi_1)
 #shopping
 #entertainment
 #service
+
+# do we want to remove certain types of businesses? 
+bus_cat_rmv <- c('#N/A', 'LAWN PARK 10 OR MORE SPACES', 'LAWN PARK UNDER 10 SPACES','TAXI VEHICLE', 'TAXI DRIVER') # any more? vending machines, transient merchants? 
+
+#### Categorize Business Data 
+food <- c('RESTAURANTS A-M', 'RESTAURANTS N-Z') # 'FOOD VENDING MACHINES', 'FOOD VENDING VEHICLES', 'ITINERANT RESTAURANT', 'MOBILE FOOD TRUCK', 
+
+
+business_licenses_df %>% 
+  filter(!Classifi_1 %in% bus_cat_rmv)
+
+
+
 ```
 
 
@@ -82,20 +116,14 @@ leaflet()  %>%
 ```
 
 ```{r}
-leaflet() %>% 
-  addTiles() %>% 
-  addPolygons(data = census) %>% 
-  addPolygons(data = city_council_dist, color = 'red')
-```
-
-```{r}
+#### Census Data
 
 # Convert Census CRS to WGS84
 census_transformed <- census %>% 
-  select(geometry, GEOID, ALAND, SE_T001_00) %>% # Add relevant census metrics... 
-  st_transform(crs = st_crs(city_council_dist))
-
-
+  select(geometry, GEOID, Population) %>% # Add relevant census metrics... 
+  st_transform(crs = st_crs(city_council_dist)) %>% 
+  mutate(c_area = units::drop_units(st_area(.)))
+  
 sf::sf_use_s2(FALSE) # reformat CRS to fix?? 
 # Set Buffer = 0 to fix city council topology
 city_council_dist2 <- sf::st_buffer(city_council_dist, dist = 0)
@@ -105,11 +133,33 @@ sf::sf_use_s2(TRUE)
 intrsct <- sf::st_intersection(city_council_dist2, census_transformed) %>% 
   mutate(in_area = units::drop_units(st_area(.))) %>% 
   ### Calc proportional census data based on area of intersection 
-  mutate(pop = SE_T001_00 * in_area / ALAND) %>% 
+  mutate(pop = Population * in_area / c_area) %>% 
   group_by(OBJECTID, Dist, Council_Me) %>% 
-  summarise(pop = sum(pop))
-  
+  summarise(pop = sum(pop)) %>% 
+  ungroup()
+
 ```
+
+```{r}
+
+### Business Data 
+
+# Give business data same CRS as intersection 
+st_crs(business_licenses_df) <- st_crs(intrsct)
+
+# Businesses inside of council districts 
+bus_in_district_sf <- st_join(business_licenses_df, city_council_dist2, join = st_intersects) %>% 
+  dplyr::select(License_Ye, Business_N, Street_Add, Business_P, Classifica, OBJECTID, Dist, Council_Me) %>% 
+  filter(is.na(Council_Me) == FALSE)
+
+# convert from sf to tibble to aggregate 
+bus_in_distric_df <- bus_in_district_sf %>% 
+  tibble() %>% 
+  group_by(Dist, Council_Me, Classifica) %>% 
+  summarise(n = n())
+
+```
+
 
 ```{r}
 ggplot() +
@@ -120,7 +170,25 @@ ggplot() +
                         labels = scales::comma_format())
 ```
 
+```{r}
+ggplot(data = bus_in_distric_df, aes(x = n, y = Classifica)) +
+  geom_col() +
+  facet_grid(~Council_Me)
 
+```
+
+
+```{r}
+
+#intr <- sf::st_intersection(city_council_dist2, census_transformed)
+leaflet() %>% 
+  addTiles() %>% 
+  #addPolygons(data = census) %>% 
+  #addPolygons(data = city_council_dist, color = 'red') %>% 
+  addPolygons(data = intr, color = 'black') #%>% 
+  # addMarkers(data = bus_in_district_sf) ### DONT RUN UNTIL CATEGORIES ARE FILTERED
+
+```
 
 
 
