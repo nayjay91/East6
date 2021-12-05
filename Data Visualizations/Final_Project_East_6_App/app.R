@@ -1,10 +1,5 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
+# App to visualize population metrics, business and school metrics and maps of the South Bend districts. 
 #
 
 library(shiny)
@@ -13,7 +8,7 @@ library(shiny)
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Old Faithful Geyser Data"),
+    titlePanel("Living in South Bend"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
@@ -27,7 +22,11 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("distPlot")
+            tabsetPanel(type = "tabs",
+                        tabPanel("Demographics", plotOutput("plot")),
+                        tabPanel("Schools and Businesses", verbatimTextOutput("Ammenities")),
+                        tabPanel("Table", plotOutput("distPlot"))
+            )
         )
     )
 )
