@@ -5,10 +5,6 @@ date: "11/30/2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 
 ```{r, warning=F, message=F}
 library(sf)
@@ -66,25 +62,69 @@ census <- census %>%
 
 # business licenses
 ```{r}
-table(business_licenses_df$Classifi_1)
-#maybe we should consider some way of categorizing and redusing the number of businesses classified here. Could have a selection pane for each type of business license. 
-#food
-#shopping
-#entertainment
-#service
-
-# do we want to remove certain types of businesses? 
-bus_cat_rmv <- c('#N/A', 'LAWN PARK 10 OR MORE SPACES', 'LAWN PARK UNDER 10 SPACES','TAXI VEHICLE', 'TAXI DRIVER') # any more? vending machines, transient merchants? 
-
 #### Categorize Business Data 
-food <- c('RESTAURANTS A-M', 'RESTAURANTS N-Z') # 'FOOD VENDING MACHINES', 'FOOD VENDING VEHICLES', 'ITINERANT RESTAURANT', 'MOBILE FOOD TRUCK', 
+food <- c('RESTAURANTS A-M', 
+          'RESTAURANTS N-Z'
+          , 'FOOD VENDING MACHINES', #may want to remove
+          'FOOD VENDING VEHICLES', #may want to remove
+          'ITINERANT RESTAURANT', #may want to remove
+          'MOBILE FOOD TRUCK' #may want to remove
+          ) 
+retail <- c('OPEN AIR VENDORS PRIVATE',
+             'SECOND HAND DEALERS',
+             'PRECIOUS METAL DEALERS',
+             'PET SHOPS',
+             'TRANSIENT MERCHANT XMAS TREE', #may want to remove
+             'PEDDLER & CANVASSER',
+             'OPEN AIR VENDORS PUBLIC'
+             )
+
+service <- c('ARBORIST/TREE SERVICE',
+            'MASSAGE THERAPY',
+            'TATTOO AND BODY PIERCING ESTABLISHMENTS',
+            'AUTOMOTIVE REPAIR & SVC',
+            'MECHANICAL LICENSE',
+            'TATTOO AND PIERCING ARTIST',
+            'VEHICLE REMOVAL',
+            'ALARM AGENT',
+            'MASSAGE ESTABLISHMENT',
+            'RUBBISH & GARBAGE REMOVAL',
+            'SELF SERVICE LAUNDRY',
+            'TRANSIENT MERCHANT',
+            'HOTEL/MOTEL', #could make this a separate category
+            'SCRAP METAL /JUNK DEALERS' #included here because generally these are used by people looking to get rid of stuff, not purchase like in retail
+            )
 
 
-business_licenses_df %>% 
-  filter(!Classifi_1 %in% bus_cat_rmv)
+entertainment <- c('ADULT BUSINESS',
+            'PERFORMING ANIMAL EXHIBITIONS',
+            'BUSKER OR SIDEWALK PERFORMER',
+            'OUTDOOR MOVIE THEATRE',
+            'POOL HALLS')
 
+transportation <- c('TAXI DRIVER',
+                    'TAXI VEHICLE',
+                    'TAXI COMPANY',
+                    'PUBLIC PARKING FACILITY',
+                    'LAWN PARK 10 OR MORE SPACES',
+                    'LAWN PARK UNDER 10 SPACES') #may want to exclude this category entirely
 
+charitable <- c('CHARITABLE SOLICITATIONS',
+                'DONATION BOXES AND CONTAINERS') #may want to exclude this category entirely
 
+#'unclassified' check for categorization, anything not included in above categories are unclassified. Remove entire categories we might want to be unclassified. 
+
+unclassified <- unique(business_licenses_df$Classifi_1) %>% 
+  as_tibble() %>% 
+  filter(!value %in% c(food, retail, service, entertainment, transportation, charitable))
+
+business_licenses_df <- business_licenses_df %>% 
+  mutate(business_type = case_when(Classifi_1 %in% food ~ 'Food',
+                                 Classifi_1 %in% retail ~ 'Retail',
+                                 Classifi_1 %in% service ~ 'Service',
+                                 Classifi_1 %in% entertainment ~ 'Entertainment',
+                                 TRUE ~ 'Unclassified')
+         )
 ```
 
 
