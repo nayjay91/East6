@@ -164,7 +164,7 @@ leaflet()  %>%
 census_transformed <- census %>% 
   select(geometry, GEOID, Population) %>% # Add relevant census metrics... 
   st_transform(crs = st_crs(city_council_dist)) %>% 
-  mutate(c_area = units::drop_units(st_area(.)))
+  mutate(c_area = units::drop_units(st_area(.))) #what are the units for area?
   
 sf::sf_use_s2(FALSE) # reformat CRS to fix?? 
 # Set Buffer = 0 to fix city council topology
@@ -177,7 +177,8 @@ intrsct <- sf::st_intersection(city_council_dist2, census_transformed) %>%
   ### Calc proportional census data based on area of intersection 
   mutate(pop = Population * in_area / c_area) %>% 
   group_by(OBJECTID, Dist, Council_Me) %>% 
-  summarise(pop = sum(pop)) %>% 
+  summarise(pop = sum(pop),
+            pop_density = sum(pop)/sum(in_area)) %>% 
   ungroup()
 
 ```
@@ -205,7 +206,7 @@ bus_in_distric_df <- bus_in_district_sf %>%
 
 ```{r}
 ggplot() +
-    geom_sf(data = intrsct, aes(fill = pop), alpha = .5, lwd = .25) +
+    geom_sf(data = intrsct, aes(fill = pop_density), alpha = .5, lwd = .25) +
     scale_fill_gradient(trans = "log10", 
                         low = "white",
                         high = "firebrick",
