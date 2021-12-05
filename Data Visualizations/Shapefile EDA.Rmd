@@ -60,7 +60,7 @@ census <- census %>%
 ```
 
 
-# business licenses
+# business licenses groupings
 ```{r}
 #### Categorize Business Data 
 food <- c('RESTAURANTS A-M', 
@@ -157,8 +157,9 @@ leaflet()  %>%
   addCircleMarkers(data = pal_abandoned,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4)
 ```
 
+# Census data to disctricts
 ```{r}
-#### Census Data
+
 
 # Convert Census CRS to WGS84
 census_transformed <- census %>% 
@@ -184,8 +185,17 @@ intrsct <- sf::st_intersection(city_council_dist2, census_transformed) %>%
 ```
 
 ```{r}
+ggplot() +
+    geom_sf(data = intrsct, aes(fill = pop_density), alpha = .5, lwd = .25) +
+    scale_fill_gradient(trans = "log10", 
+                        low = "white",
+                        high = "firebrick",
+                        labels = scales::comma_format())
+```
+# Business License Locations 
+```{r}
 
-### Business Data 
+
 
 # Give business data same CRS as intersection 
 st_crs(business_licenses_df) <- st_crs(intrsct)
@@ -201,16 +211,6 @@ bus_in_distric_df <- bus_in_district_sf %>%
   group_by(Dist, Council_Me, business_type) %>% 
   summarise(n = n())
 
-```
-
-
-```{r}
-ggplot() +
-    geom_sf(data = intrsct, aes(fill = pop_density), alpha = .5, lwd = .25) +
-    scale_fill_gradient(trans = "log10", 
-                        low = "white",
-                        high = "firebrick",
-                        labels = scales::comma_format())
 ```
 
 ```{r}
