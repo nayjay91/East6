@@ -64,37 +64,37 @@ census <- census %>%
 ```{r}
 #### Categorize Business Data 
 food <- c('RESTAURANTS A-M', 
-          'RESTAURANTS N-Z'
-          , 'FOOD VENDING MACHINES', #may want to remove
+          'RESTAURANTS N-Z',
+          'FOOD VENDING MACHINES', #may want to remove
           'FOOD VENDING VEHICLES', #may want to remove
           'ITINERANT RESTAURANT', #may want to remove
           'MOBILE FOOD TRUCK' #may want to remove
           ) 
+
 retail <- c('OPEN AIR VENDORS PRIVATE',
+             'OPEN AIR VENDORS PUBLIC',
              'SECOND HAND DEALERS',
              'PRECIOUS METAL DEALERS',
              'PET SHOPS',
              'TRANSIENT MERCHANT XMAS TREE', #may want to remove
-             'PEDDLER & CANVASSER',
-             'OPEN AIR VENDORS PUBLIC'
+             'TRANSIENT MERCHANT', #may want to remove
+             'PEDDLER & CANVASSER'
              )
 
 service <- c('ARBORIST/TREE SERVICE',
             'MASSAGE THERAPY',
+            'MASSAGE ESTABLISHMENT',
             'TATTOO AND BODY PIERCING ESTABLISHMENTS',
             'AUTOMOTIVE REPAIR & SVC',
             'MECHANICAL LICENSE',
             'TATTOO AND PIERCING ARTIST',
             'VEHICLE REMOVAL',
             'ALARM AGENT',
-            'MASSAGE ESTABLISHMENT',
             'RUBBISH & GARBAGE REMOVAL',
             'SELF SERVICE LAUNDRY',
-            'TRANSIENT MERCHANT',
             'HOTEL/MOTEL', #could make this a separate category
             'SCRAP METAL /JUNK DEALERS' #included here because generally these are used by people looking to get rid of stuff, not purchase like in retail
             )
-
 
 entertainment <- c('ADULT BUSINESS',
             'PERFORMING ANIMAL EXHIBITIONS',
@@ -125,6 +125,8 @@ business_licenses_df <- business_licenses_df %>%
                                  Classifi_1 %in% entertainment ~ 'Entertainment',
                                  TRUE ~ 'Unclassified')
          )
+
+table(business_licenses_df$business_type)
 ```
 
 
@@ -189,13 +191,13 @@ st_crs(business_licenses_df) <- st_crs(intrsct)
 
 # Businesses inside of council districts 
 bus_in_district_sf <- st_join(business_licenses_df, city_council_dist2, join = st_intersects) %>% 
-  dplyr::select(License_Ye, Business_N, Street_Add, Business_P, Classifica, OBJECTID, Dist, Council_Me) %>% 
+  dplyr::select(License_Ye, Business_N, Street_Add, Business_P, business_type, OBJECTID, Dist, Council_Me) %>% 
   filter(is.na(Council_Me) == FALSE)
 
 # convert from sf to tibble to aggregate 
 bus_in_distric_df <- bus_in_district_sf %>% 
   tibble() %>% 
-  group_by(Dist, Council_Me, Classifica) %>% 
+  group_by(Dist, Council_Me, business_type) %>% 
   summarise(n = n())
 
 ```
@@ -211,7 +213,7 @@ ggplot() +
 ```
 
 ```{r}
-ggplot(data = bus_in_distric_df, aes(x = n, y = Classifica)) +
+ggplot(data = bus_in_distric_df, aes(x = n, y = business_type)) +
   geom_col() +
   facet_grid(~Council_Me)
 
