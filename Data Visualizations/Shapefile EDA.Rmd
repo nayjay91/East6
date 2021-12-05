@@ -5,7 +5,7 @@ date: "11/30/2021"
 output: html_document
 ---
 
-
+# Setup and Load
 ```{r, warning=F, message=F}
 library(sf)
 library(ggmap)
@@ -59,8 +59,54 @@ census <- census %>%
 
 ```
 
+# Abandoned Properties
 
-# business licenses groupings
+```{r}
+
+#did not finish this section
+# pal_abandoned <- colorFactor(palette = 'Set2', domain = abandoned_properties$Outcome_St)
+# business_licenses_df$popup <- paste("<b>",business_licenses_df$Business_N,"</b><br>",
+#                                   "Type: ",business_licenses_df$Classifi_1,sep ="")
+# 
+# leaflet()  %>%
+#   addTiles()  %>%
+#   addCircleMarkers(data = pal_abandoned,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4)
+```
+
+# Census data to disctricts
+```{r}
+# Convert Census CRS to WGS84
+census_transformed <- census %>% 
+  select(geometry, GEOID, Population) %>% # Add relevant census metrics... 
+  st_transform(crs = st_crs(city_council_dist)) %>% 
+  mutate(c_area = units::drop_units(st_area(.))) #what are the units for area?
+  
+sf::sf_use_s2(FALSE) # reformat CRS to fix?? 
+# Set Buffer = 0 to fix city council topology
+city_council_dist2 <- sf::st_buffer(city_council_dist, dist = 0)
+sf::sf_use_s2(TRUE)
+
+
+intrsct <- sf::st_intersection(city_council_dist2, census_transformed) %>% 
+  mutate(in_area = units::drop_units(st_area(.))) %>% 
+  ### Calc proportional census data based on area of intersection 
+  mutate(pop = Population * in_area / c_area) %>% 
+  group_by(OBJECTID, Dist, Council_Me) %>% 
+  summarise(pop = sum(pop),
+            pop_density = sum(pop)/sum(in_area)) %>% 
+  ungroup()
+
+```
+
+```{r}
+ggplot() +
+    geom_sf(data = intrsct, aes(fill = pop_density), alpha = .5, lwd = .25) +
+    scale_fill_gradient(trans = "log10", 
+                        low = "white",
+                        high = "firebrick",
+                        labels = scales::comma_format())
+```
+#Business License Groupings
 ```{r}
 #### Categorize Business Data 
 food <- c('RESTAURANTS A-M', 
@@ -128,81 +174,15 @@ business_licenses_df <- business_licenses_df %>%
 
 table(business_licenses_df$business_type)
 ```
-
-
-```{r}
-pal_business <- colorFactor(palette = 'Set2', domain = business_licenses_df$Classifi_1)
-business_licenses_df$popup <- paste("<b>",business_licenses_df$Business_N,"</b><br>",
-                                  "Type: ",business_licenses_df$Classifi_1,sep ="")
-
-leaflet()  %>%
-  addTiles()  %>%
-  addCircleMarkers(data = business_licenses_df,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4) 
-```
-# Abandoned Properties
-
-```{r}
-View(abandoned_properties)
-```
-
-```{r}
-
-#did not finish this section
-pal_abandoned <- colorFactor(palette = 'Set2', domain = abandoned_properties$Outcome_St)
-business_licenses_df$popup <- paste("<b>",business_licenses_df$Business_N,"</b><br>",
-                                  "Type: ",business_licenses_df$Classifi_1,sep ="")
-
-leaflet()  %>%
-  addTiles()  %>%
-  addCircleMarkers(data = pal_abandoned,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4)
-```
-
-# Census data to disctricts
-```{r}
-
-
-# Convert Census CRS to WGS84
-census_transformed <- census %>% 
-  select(geometry, GEOID, Population) %>% # Add relevant census metrics... 
-  st_transform(crs = st_crs(city_council_dist)) %>% 
-  mutate(c_area = units::drop_units(st_area(.))) #what are the units for area?
-  
-sf::sf_use_s2(FALSE) # reformat CRS to fix?? 
-# Set Buffer = 0 to fix city council topology
-city_council_dist2 <- sf::st_buffer(city_council_dist, dist = 0)
-sf::sf_use_s2(TRUE)
-
-
-intrsct <- sf::st_intersection(city_council_dist2, census_transformed) %>% 
-  mutate(in_area = units::drop_units(st_area(.))) %>% 
-  ### Calc proportional census data based on area of intersection 
-  mutate(pop = Population * in_area / c_area) %>% 
-  group_by(OBJECTID, Dist, Council_Me) %>% 
-  summarise(pop = sum(pop),
-            pop_density = sum(pop)/sum(in_area)) %>% 
-  ungroup()
-
-```
-
-```{r}
-ggplot() +
-    geom_sf(data = intrsct, aes(fill = pop_density), alpha = .5, lwd = .25) +
-    scale_fill_gradient(trans = "log10", 
-                        low = "white",
-                        high = "firebrick",
-                        labels = scales::comma_format())
-```
 # Business License Locations 
 ```{r}
-
-
 
 # Give business data same CRS as intersection 
 st_crs(business_licenses_df) <- st_crs(intrsct)
 
 # Businesses inside of council districts 
 bus_in_district_sf <- st_join(business_licenses_df, city_council_dist2, join = st_intersects) %>% 
-  dplyr::select(License_Ye, Business_N, Street_Add, Business_P, business_type, OBJECTID, Dist, Council_Me) %>% 
+  dplyr::select(License_Ye, Business_N, Street_Add, Business_P, business_type, OBJECTID, Classifi_1, Dist, Council_Me) %>% 
   filter(is.na(Council_Me) == FALSE)
 
 # convert from sf to tibble to aggregate 
@@ -212,14 +192,42 @@ bus_in_distric_df <- bus_in_district_sf %>%
   summarise(n = n())
 
 ```
+#Business License Viz
+```{r}
+pal_business <- colorFactor(palette = 'Set2', domain = bus_in_district_sf$business_type)
+bus_in_district_sf$popup <- paste("<b>",bus_in_district_sf$Business_N,"</b><br>",
+                                  "Type: ",bus_in_district_sf$Classifi_1,sep ="")
+
+leaflet()  %>%
+  addTiles()  %>%
+  addCircleMarkers(data = bus_in_district_sf,popup = ~popup,  color = ~pal_business(business_type), stroke = 0, fillOpacity = 1, radius = 4) 
+```
 
 ```{r}
 ggplot(data = bus_in_distric_df, aes(x = n, y = business_type)) +
   geom_col() +
   facet_grid(~Council_Me)
+```
+# Schools
 
+```{r}
+# Give school data same CRS as intersection 
+st_crs(school_boundaries) <- st_crs(intrsct)
+
+# Schools inside of council districts 
+school_boundaries_sf <- st_join(school_boundaries, city_council_dist2, join = st_intersects) %>% 
+  dplyr::select(School, SchoolType, Dist, Council_Me) %>% 
+  filter(is.na(Council_Me) == FALSE)
+
+# convert from sf to tibble to aggregate 
+school_in_distric_df <- school_boundaries_sf %>% 
+  tibble() %>% 
+  group_by(SchoolType, Council_Me) %>% 
+  summarise(n = n())
 ```
 
+
+# Below purpose is unclear
 
 ```{r}
 
