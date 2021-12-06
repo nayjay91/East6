@@ -3,6 +3,7 @@
 #
 
 library(shiny)
+library(leaflet)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -22,7 +23,7 @@ ui <- fluidPage(
                                     "Dr. David Varner",
                                     "Oliver Davis",
                                     "All"
-                                    ),#this may be fine, but for programing would not want to hard code
+                                    ),#this may be fine, but for programming would not want to hard code (We will be able use variables from council data as input to choices once data is sourced in -Eli)
                         selected = "All"
                         )
         ),
@@ -43,7 +44,13 @@ server <- function(input, output) {
 
     output$demographics <- renderPrint("Demographics graphs")
     output$ammenities <- renderPrint("All sorts of public interest graphs")
-    output$maps <- renderPrint("coolest map")
+    
+    output$maps <- renderLeaflet({
+        leaflet(data = mapStates, options = leafletOptions(minZoom = 3, maxZoom = 18)) %>% 
+            #clearBounds() %>%
+            addTiles() %>% 
+            addCircleMarkers()
+    })
 }
 
 # Run the application 

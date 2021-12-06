@@ -24,18 +24,22 @@ logs_311_df <- read.csv("Data/311_Phone_Call_Log_Mod.csv")
 #311 files do not contain geographical information. 
 
 business_licenses_df <- read.csv("Data/Business_Licenses_geocoded.csv")%>% 
-  st_as_sf(coords = c("X","Y"))
+  st_as_sf(coords = c("X","Y"), 
+           crs = "+proj=longlat +datum=WGS84 +ellps=WGS84")
 
 #business licenses uses x/y instead of lat/lon
 
 parks_df <- read.csv("Data/Parks_Locations_and_Features.csv") %>% 
-  st_as_sf(coords = c("Lon","Lat"))
+  st_as_sf(coords = c("Lon","Lat"), 
+           crs = "+proj=longlat +datum=WGS84 +ellps=WGS84")
 
 public_facilities_df <- read.csv("Data/Public_Facilities.csv") %>% 
-  st_as_sf(coords = c("Lon","Lat"))
+  st_as_sf(coords = c("Lon","Lat"), 
+           crs = "+proj=longlat +datum=WGS84 +ellps=WGS84")
 
 street_lights_df <- read.csv("Data/Street_lights.csv") %>% 
-  st_as_sf(coords = c("Lon","Lat"))
+  st_as_sf(coords = c("Lon","Lat"), 
+           crs = "+proj=longlat +datum=WGS84 +ellps=WGS84")
 ```
 
 ```{r}
@@ -53,6 +57,7 @@ census <- census %>%
                 age_55_64 = SE_T008_10,
                 age_65_74 = SE_T008_11,
                 age_75_84 = SE_T008_12,
+                ## There should be an Over 85 column but not in the provided data... maybe total pop - sum(all existing ages)?
                 occupied_houses = SE_T069_01, 
                 owner_occupied = SE_T069_02) %>% 
   dplyr::mutate(renter_occupied = occupied_houses - owner_occupied)
@@ -87,7 +92,21 @@ city_council_dist2 <- sf::st_buffer(city_council_dist, dist = 0)
 sf::sf_use_s2(TRUE)
 
 
-intrsct <- sf::st_intersection(city_council_dist2, census_transformed) %>% 
+# Create a polygon for every district 
+all_councils <- city_council_dist2 %>% 
+  mutate(agg = 'All') %>% 
+  group_by(agg) %>% 
+  summarise() %>% 
+  mutate(OBJECTID_1 = 0, OBJECTID = 0, Dist = 0, Num = 0, Shape_STAr = NA, Shape_STLe = NA, 
+         Council_Me = 'All', Email = NA, created_us = NA, created_da = NA, last_edite = NA, 
+         last_edi_1 = NA, ShapeSTAre = NA, ShapeSTLen = NA) %>% 
+  dplyr::select(-agg)
+
+# Bind 'all' polygon back to original data 
+city_council_dist3 <- rbind(city_council_dist2, all_councils)
+
+
+intrsct <- sf::st_intersection(city_council_dist3, census_transformed) %>% 
   mutate(in_area = units::drop_units(st_area(.))) %>% 
   ### Calc proportional census data based on area of intersection 
   mutate(pop = Population * in_area / c_area) %>% 
