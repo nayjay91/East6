@@ -66,12 +66,13 @@ server <- function(input, output) {
     output$demographics <- renderPrint("Demographics graphs")
     output$ammenities <- renderPrint("All sorts of public interest graphs")
     
-    output$maps <- renderLeaflet({
-        leaflet(data = mapStates, options = leafletOptions(minZoom = 3, maxZoom = 18)) %>% 
-            #clearBounds() %>%
-            addTiles() %>% 
-            addCircleMarkers()
-    })
+    output$maps <- renderPrint("cool map")
+        #            renderLeaflet({
+        # leaflet(data = mapStates, options = leafletOptions(minZoom = 3, maxZoom = 18)) %>% 
+        #     #clearBounds() %>%
+        #     addTiles() %>% 
+        #     addCircleMarkers()
+        # })
 }
 
 # Run the application 
