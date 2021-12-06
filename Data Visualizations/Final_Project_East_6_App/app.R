@@ -8,24 +8,31 @@ library(shiny)
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Living in South Bend"),
+    titlePanel("Moving South Bend Forward"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
+            selectInput(inputId = "district",
+                        "Council Disctrict:",
+                        choices = c("Tim Scott",
+                                    "Regina Williams",
+                                    "Sharon McBride",
+                                    "Jo M. Broden",
+                                    "Dr. David Varner",
+                                    "Oliver Davis",
+                                    "All"
+                                    ),#this may be fine, but for programing would not want to hard code
+                        selected = "All"
+                        )
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
             tabsetPanel(type = "tabs",
-                        tabPanel("Demographics", plotOutput("plot")),
-                        tabPanel("Schools and Businesses", verbatimTextOutput("Ammenities")),
-                        tabPanel("Table", plotOutput("distPlot"))
+                        tabPanel("Demographics", verbatimTextOutput("demographics")),
+                        tabPanel("Schools and Businesses", verbatimTextOutput("ammenities")),
+                        tabPanel("Map", verbatimTextOutput("maps"))
             )
         )
     )
@@ -34,14 +41,9 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
-    })
+    output$demographics <- renderPrint("Demographics graphs")
+    output$ammenities <- renderPrint("All sorts of public interest graphs")
+    output$maps <- renderPrint("coolest map")
 }
 
 # Run the application 

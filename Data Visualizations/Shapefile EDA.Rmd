@@ -243,6 +243,10 @@ leaflet() %>%
 
 
 
+```{r}
+unique(city_council_dist$Council_Me)
+```
+
 
 
 
