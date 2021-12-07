@@ -16,14 +16,9 @@ census <- st_read("Data/2010_CensusData/2010_CensusData.shp")
 city_council_dist <- st_read("Data/City_Council_Districts/City_Council_Districts.shp")
 school_boundaries <- st_read("Data/School_Boundaries/School_Boundaries.shp")
 
-
-#311 files do not contain geographical information. 
-
 business_licenses_df <- read.csv("Data/Business_Licenses_geocoded.csv")%>% 
   st_as_sf(coords = c("X","Y"), 
            crs = "+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-#business licenses uses x/y instead of lat/lon
 
 parks_df <- read.csv("Data/Parks_Locations_and_Features.csv") %>% 
   st_as_sf(coords = c("Lon","Lat"), 
@@ -32,6 +27,7 @@ parks_df <- read.csv("Data/Parks_Locations_and_Features.csv") %>%
 public_facilities_df <- read.csv("Data/Public_Facilities.csv") %>% 
   st_as_sf(coords = c("Lon","Lat"), 
            crs = "+proj=longlat +datum=WGS84 +ellps=WGS84")
+
 ```
 
 ```{r}
@@ -55,20 +51,6 @@ census <- census %>%
   dplyr::mutate(renter_occupied = occupied_houses - owner_occupied, 
                 age_o85 = Population - (age_u5+ age_5_9+ age_11_14+ age_15_17+ age_18_24+ age_25_34+ age_35_44+ age_45_54+ age_55_64+ age_65_74+ age_75_84))
 
-```
-
-# Abandoned Properties
-
-```{r}
-
-#did not finish this section
-# pal_abandoned <- colorFactor(palette = 'Set2', domain = abandoned_properties$Outcome_St)
-# business_licenses_df$popup <- paste("<b>",business_licenses_df$Business_N,"</b><br>",
-#                                   "Type: ",business_licenses_df$Classifi_1,sep ="")
-# 
-# leaflet()  %>%
-#   addTiles()  %>%
-#   addCircleMarkers(data = pal_abandoned,popup = ~popup,  color = ~pal_business(Classifi_1), stroke = 0, fillOpacity = 1, radius = 4)
 ```
 
 # Census data to disctricts
@@ -133,21 +115,21 @@ ggplot() +
 ```{r}
 #### Categorize Business Data 
 food <- c('RESTAURANTS A-M', 
-          'RESTAURANTS N-Z',
-          'FOOD VENDING MACHINES', #may want to remove
-          'FOOD VENDING VEHICLES', #may want to remove
-          'ITINERANT RESTAURANT', #may want to remove
-          'MOBILE FOOD TRUCK' #may want to remove
+          'RESTAURANTS N-Z'
+          # 'FOOD VENDING MACHINES', #may want to remove
+          # 'FOOD VENDING VEHICLES', #may want to remove
+          # 'ITINERANT RESTAURANT', #may want to remove
+          # 'MOBILE FOOD TRUCK' #may want to remove
           ) 
 
 retail <- c('OPEN AIR VENDORS PRIVATE',
              'OPEN AIR VENDORS PUBLIC',
              'SECOND HAND DEALERS',
              'PRECIOUS METAL DEALERS',
-             'PET SHOPS',
-             'TRANSIENT MERCHANT XMAS TREE', #may want to remove
-             'TRANSIENT MERCHANT', #may want to remove
-             'PEDDLER & CANVASSER'
+             'PET SHOPS'
+             # 'TRANSIENT MERCHANT XMAS TREE', #may want to remove
+             # 'TRANSIENT MERCHANT', #may want to remove
+             # 'PEDDLER & CANVASSER'
              )
 
 service <- c('ARBORIST/TREE SERVICE',
@@ -161,6 +143,7 @@ service <- c('ARBORIST/TREE SERVICE',
             'ALARM AGENT',
             'RUBBISH & GARBAGE REMOVAL',
             'SELF SERVICE LAUNDRY',
+            'TAXI COMPANY',
             'HOTEL/MOTEL', #could make this a separate category
             'SCRAP METAL /JUNK DEALERS' #included here because generally these are used by people looking to get rid of stuff, not purchase like in retail
             )
@@ -173,10 +156,9 @@ entertainment <- c('ADULT BUSINESS',
 
 transportation <- c('TAXI DRIVER',
                     'TAXI VEHICLE',
-                    'TAXI COMPANY',
                     'PUBLIC PARKING FACILITY',
                     'LAWN PARK 10 OR MORE SPACES',
-                    'LAWN PARK UNDER 10 SPACES') #may want to exclude this category entirely
+                    'LAWN PARK UNDER 10 SPACES') #group is excluded
 
 charitable <- c('CHARITABLE SOLICITATIONS',
                 'DONATION BOXES AND CONTAINERS') #may want to exclude this category entirely
@@ -185,7 +167,7 @@ charitable <- c('CHARITABLE SOLICITATIONS',
 
 unclassified <- unique(business_licenses_df$Classifi_1) %>% 
   as_tibble() %>% 
-  filter(!value %in% c(food, retail, service, entertainment, transportation, charitable))
+  filter(!value %in% c(food, retail, service, entertainment))
 
 business_licenses_df <- business_licenses_df %>% 
   mutate(business_type = case_when(Classifi_1 %in% food ~ 'Food',
@@ -193,9 +175,10 @@ business_licenses_df <- business_licenses_df %>%
                                  Classifi_1 %in% service ~ 'Service',
                                  Classifi_1 %in% entertainment ~ 'Entertainment',
                                  TRUE ~ 'Unclassified')
-         )
+         ) %>% 
+  filter(!business_type == "Unclassified")
 
-table(business_licenses_df$business_type)
+
 ```
 # Business License Locations 
 ```{r}
@@ -223,7 +206,7 @@ bus_in_district_sf$popup <- paste("<b>",bus_in_district_sf$Business_N,"</b><br>"
 
 leaflet()  %>%
   addTiles()  %>%
-  addCircleMarkers(data = bus_in_district_sf,popup = ~popup,  color = ~pal_business(business_type), stroke = 0, fillOpacity = 1, radius = 4) 
+  addCircleMarkers(data = bus_in_district_sf, stroke = 0, fillOpacity = 1, radius = 4) 
 ```
 
 ```{r}
@@ -249,8 +232,57 @@ school_in_distric_df <- school_boundaries_sf %>%
   summarise(n = n())
 ```
 
+# Parks
+```{r}
+# Give school data same CRS as intersection 
+st_crs(parks_df) <- st_crs(intrsct)
 
-# Below purpose is unclear
+# Schools inside of council districts 
+parks_sf <- st_join(parks_df, city_council_dist2, join = st_intersects) %>% 
+  dplyr::select(Park_Name, Park_Type, Dist, Council_Me) %>% 
+  filter(is.na(Council_Me) == FALSE)
+
+# convert from sf to tibble to aggregate 
+parks_summary <- parks_sf %>% 
+  tibble() %>% 
+  group_by(Park_Type, Council_Me) %>% 
+  summarise(n = n())
+```
+
+# Public Works
+
+```{r}
+# Give school data same CRS as intersection 
+st_crs(public_facilities_df) <- st_crs(intrsct)
+
+# Public facilities inside of council districts 
+public_facilities_sf <- st_join(public_facilities_df, city_council_dist2, join = st_intersects) %>% 
+  dplyr::select(POPL_NAME, POPL_TYPE, Dist, Council_Me) %>% 
+  filter(is.na(Council_Me) == FALSE)
+
+# convert from sf to tibble to aggregate 
+public_facilities_summary <- public_facilities_sf %>% 
+  tibble() %>% 
+  group_by(POPL_TYPE, Council_Me) %>% 
+  summarise(n = n())
+```
+#write data
+```{r}
+write_rds(demographics_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/demographics.rds")
+
+write_rds(bus_in_district_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/business_license.rds")
+
+write_rds(school_boundaries_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/schools.rds")
+
+write_rds(parks_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/parks.rds")
+
+write_rds(public_facilities_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/public_facilities.rds")
+
+readRDS("C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/public_facilities.rds")
+```
+
+
+# Below is for reference
 
 ```{r}
 
@@ -266,9 +298,6 @@ leaflet() %>%
 
 
 
-```{r}
-unique(city_council_dist$Council_Me)
-```
 
 
 
