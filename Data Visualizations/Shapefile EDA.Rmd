@@ -81,24 +81,41 @@ all_councils <- city_council_dist2 %>%
 city_council_dist3 <- rbind(city_council_dist2, all_councils)
 
 
-intrsct <- sf::st_intersection(city_council_dist3, census_transformed) %>% 
+demographics_sf <- sf::st_intersection(city_council_dist3, census_transformed) %>% 
   mutate(in_area = units::drop_units(st_area(.))) %>% 
   ### Calc proportional census data based on area of intersection 
   mutate(pop = Population * in_area / c_area, 
-         age_u5 = age_u5 * in_area / c_area,
-         age_5_9 = age_5_9 * in_area / c_area,
-         age_11_14 = age_11_14 * in_area / c_area,
-         age_15_17 = age_15_17 * in_area / c_area,
-         age_18_24 = age_18_24 * in_area / c_area,
-         age_25_34 = age_25_34 * in_area / c_area,
-         age_35_44 = age_35_44 * in_area / c_area,
-         age_45_54 = age_45_54 * in_area / c_area,
-         age_55_64 = age_55_64 * in_area / c_area,
-         age_65_74 = age_65_74 * in_area / c_area,
-         age_75_84 = age_75_84 * in_area / c_area) %>% 
+         age_u5 = round(age_u5 * in_area / c_area),
+         age_5_9 = round(age_5_9 * in_area / c_area),
+         age_11_14 = round(age_11_14 * in_area / c_area),
+         age_15_17 = round(age_15_17 * in_area / c_area),
+         age_18_24 = round(age_18_24 * in_area / c_area),
+         age_25_34 = round(age_25_34 * in_area / c_area),
+         age_35_44 = round(age_35_44 * in_area / c_area),
+         age_45_54 = round(age_45_54 * in_area / c_area),
+         age_55_64 = round(age_55_64 * in_area / c_area),
+         age_65_74 = round(age_65_74 * in_area / c_area),
+         age_75_84 = round(age_75_84 * in_area / c_area), 
+         age_o85 = round(age_o85 * in_area / c_area), 
+         owner_occupied = round(owner_occupied), 
+         renter_occupied = round(renter_occupied)) %>% 
   group_by(OBJECTID, Dist, Council_Me) %>% 
   summarise(pop = sum(pop),
-            pop_density = sum(pop)/sum(in_area)) %>% 
+            pop_density = sum(pop)/sum(in_area), 
+            age_u5 = sum(age_u5),
+            age_5_9 = sum(age_5_9),
+            age_11_14 = sum(age_11_14),  
+            age_15_17 = sum(age_15_17),  
+            age_18_24 = sum(age_18_24),  
+            age_25_34 = sum(age_25_34),  
+            age_35_44 = sum(age_35_44),  
+            age_45_54 = sum(age_45_54),  
+            age_55_64 = sum(age_55_64),  
+            age_65_74 = sum(age_65_74),  
+            age_75_84 = sum(age_75_84),  
+            age_o85 = sum(age_o85),
+            owner_occupied = sum(owner_occupied),
+            renter_occupied = sum(renter_occupied)) %>% 
   ungroup()
 
 ```
