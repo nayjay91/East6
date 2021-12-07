@@ -2,14 +2,15 @@
 # App to visualize population metrics, business and school metrics and maps of the South Bend districts. 
 #
 
+#setwd('~/notre-dame/data_viz/East6/Data Visualizations/Final_Project_East_6_App/')
+
 library(shiny)
 library(leaflet)
+library(dplyr)
+library(sf)
 
-demographics <- readRDS("./data/demographics.rds")
-business_license <- readRDS("./data/business_license.rds")
-schools <- readRDS("./data/schools.rds")
-parks <- readRDS("./data/parks.rds")
-public_facilities.rds <- readRDS("./data/public_facilities.rds")
+# loads in all data and builds summary tables 
+source('./read_data.R')
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(

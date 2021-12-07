@@ -237,8 +237,11 @@ ggplot(data = bus_in_distric_df, aes(x = n, y = business_type)) +
 # Give school data same CRS as intersection 
 st_crs(school_boundaries) <- st_crs(intrsct)
 
+# centroids
+school_centroids <- st_centroid(school_boundaries)
+
 # Schools inside of council districts 
-school_boundaries_sf <- st_join(school_boundaries, city_council_dist2, join = st_intersects) %>% 
+school_boundaries_sf <- st_join(school_centroids, city_council_dist2, join = st_intersects) %>% 
   dplyr::select(School, SchoolType, Dist, Council_Me) %>% 
   filter(is.na(Council_Me) == FALSE)
 
