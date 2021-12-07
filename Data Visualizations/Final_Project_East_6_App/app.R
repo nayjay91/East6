@@ -5,6 +5,12 @@
 library(shiny)
 library(leaflet)
 
+demographics <- readRDS("./data/demographics.rds")
+business_license <- readRDS("./data/business_license.rds")
+schools <- readRDS("./data/schools.rds")
+parks <- readRDS("./data/parks.rds")
+public_facilities.rds <- readRDS("./data/public_facilities.rds")
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 

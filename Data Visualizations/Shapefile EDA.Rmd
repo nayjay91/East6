@@ -195,7 +195,7 @@ bus_in_district_sf$popup <- paste("<b>",bus_in_district_sf$Business_N,"</b><br>"
 
 leaflet()  %>%
   addTiles()  %>%
-  addCircleMarkers(data = bus_in_district_sf,popup = ~popup,  color = ~pal_business(business_type), stroke = 0, fillOpacity = 1, radius = 4) 
+  addCircleMarkers(data = bus_in_district_sf, stroke = 0, fillOpacity = 1, radius = 4) 
 ```
 
 ```{r}
@@ -232,7 +232,7 @@ parks_sf <- st_join(parks_df, city_council_dist2, join = st_intersects) %>%
   filter(is.na(Council_Me) == FALSE)
 
 # convert from sf to tibble to aggregate 
-parks_df <- parks_sf %>% 
+parks_summary <- parks_sf %>% 
   tibble() %>% 
   group_by(Park_Type, Council_Me) %>% 
   summarise(n = n())
@@ -250,11 +250,26 @@ public_facilities_sf <- st_join(public_facilities_df, city_council_dist2, join =
   filter(is.na(Council_Me) == FALSE)
 
 # convert from sf to tibble to aggregate 
-public_facilities_df <- public_facilities_sf %>% 
+public_facilities_summary <- public_facilities_sf %>% 
   tibble() %>% 
   group_by(POPL_TYPE, Council_Me) %>% 
   summarise(n = n())
 ```
+#write data
+```{r}
+write_rds(demographics_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/demographics.rds")
+
+write_rds(bus_in_district_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/business_license.rds")
+
+write_rds(school_boundaries_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/schools.rds")
+
+write_rds(parks_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/parks.rds")
+
+write_rds(public_facilities_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/public_facilities.rds")
+
+readRDS("C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/public_facilities.rds")
+```
+
 
 # Below is for reference
 
