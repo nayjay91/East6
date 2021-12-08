@@ -185,7 +185,7 @@ q2 <- missing_encoded %>%
 Created subset with customer satisfaction and comments
 
 ```{r}
-q3 <- SFOdata %>% select(RESPNUM,contains("COM"))
+q3 <- SFOdata %>% select(RESPNUM,Q7_text_All)
 ```
 
 ## Question 1
@@ -194,25 +194,26 @@ Customers were asked to rate their opinion of the "SFO Airport as a whole" on a 
 
 We can see how the individual demographics (age, income, gender) relate to the overall satisfaction.
 
+
+The age group 25-34 filled out the most survey. Ratings of 4 were the most prevalent across all age groups.
 ```{r}
-ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(Age))) +
-  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Satisfaction") + scale_fill_discrete(name = "Age")
+ggplot(data = q1,aes(x=as.factor(Age), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Age")+scale_x_discrete(labels=c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older","Don't know/refused")) +ylab("Proportion") +ggtitle("Satisfaction by Age")+ scale_fill_discrete(name = "Satisfaction")+theme(axis.text.x = element_text(angle=45))
 ```
 
-As a note, 0=male and 1=female which differs slightly from the data dictionary.
-
+More males completed the surveys than females. Both rated the airport as 4 the most.
 ```{r}
-ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(Gender))) +
-  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Satisfaction") + scale_fill_discrete(name = "Gender")
+ggplot(data = q1,aes(x=as.factor(Gender), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Gender") +ylab("Proportion")+scale_x_discrete(labels=c("Male","Female")) +ggtitle("Satisfaction by Gender")+ scale_fill_discrete(name = "Satisfaction")
 ```
 
+Those with an income of 50,000 to 100,000 completed the survey. All income groups rated the airport as 4 the most.
 ```{r}
-ggplot(data = q1,aes(x=as.factor(CFO_Airport_as_a_whole_0_6), fill = as.factor(Income_code))) +
-  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Satisfaction") + scale_fill_discrete(name = "Income")
+ggplot(data = q1,aes(x=as.factor(Income_code), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Income") +ylab("Proportion")+scale_x_discrete(labels = c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")) +ggtitle("Satisfaction by Income")+ scale_fill_discrete(name = "Satisfaction")
 ```
 
-Used clustering to determine how the customers are grouped.
-
+To determine if there are patterns across demographic groups, we used clustering to determine how the customers are grouped.Clustering allows us to combine the different demographics and then group similar objects together.
 ```{r,message = F}
 library(factoextra)
 library(cluster)
@@ -222,8 +223,7 @@ library(NbClust)
 library(lavaan)
 ```
 
-Determine how many clusters to use.
-
+First, we must determine how many clusters to use. This number is the number of groups that the different objects will be grouped in. We see from the graph below to use 4 groups.
 ```{r}
 q1 %>% 
   scale() %>% 
@@ -231,9 +231,7 @@ q1 %>%
   fviz_nbclust(x = ., FUNcluster = kmeans, method = "gap")
 ```
 
-Used the kmeans test. This test does not respond well to outliers.
-
-Partioning around medoids can circumvent outliers. However, since the data is based on 5 responses, there will not be any outliers.
+Used the kmeans test, where the different groups are formed by the closest observations to the mean of the cluster. This test does not respond well to outliers. However, since the data is based on 5 discrete responses, there will not be any outliers.
 
 ```{r}
 kmeansTest <-  kmeans(x = scale(na.omit(q1)), centers = 4)
@@ -241,6 +239,7 @@ kmeansTest <-  kmeans(x = scale(na.omit(q1)), centers = 4)
 fviz_cluster(kmeansTest, scale(na.omit(q1)))
 ```
 
+We can view the values of the centers of the clusters.
 ```{r}
 kmeansTest$centers
 ```
@@ -274,7 +273,11 @@ clusterCentersRaw %>%
  mutate_if(is.numeric, round, digits = 2)
 ```
 
-We see that the clusters represent the different customers. Cluster 1: 35-44, Around 75k, female, highly positive Cluster 2: 44-55, Around 150k, female, satisfactory Cluster 3: 25-35, Around 75k, male, highly positive Cluster 4: 45-54, Around 150k, male, satisfactory
+We see that the clusters demonstrate that there is a pattern across satisfied and dissatisfied customers based on demographic characteristics.  
+Cluster 1: 35-44, Around 75k, female, highly positive 
+Cluster 2: 44-55, Around 150k, female, satisfactory 
+Cluster 3: 25-35, Around 75k, male, highly positive 
+Cluster 4: 45-54, Around 150k, male, satisfactory
 
 ## Question 2
 
@@ -286,7 +289,7 @@ library(lavaan)
 library(ggcorrplot)
 ```
 
-The customer satisfaction by airport aspect can be seen as the following.
+The customer satisfaction by each individual airport aspect can be seen as the following. We see that the highest ratings are 3s and 4s for most of the airport aspects. 
 
 ```{r}
 q2 %>% pivot_longer(cols = ends_with("0_6")) %>%
@@ -298,7 +301,9 @@ facet_wrap(~name, nrow = 4) +
 xlab('Rating')
 ```
 
-To see the broad themes among the responses, we can use factor analysis. Factor analysis can observe if there are any latent variables across these variables to contribute towards customer satisfaction.
+To see the broad themes among the responses, we can use factor analysis. Factor analysis can observe if there are any latent variables (or unobservable variables) across these variables to contribute towards customer satisfaction.
+
+We first determine if factor analysis can be performed on this data set.
 
 ```{r}
 cortest.bartlett(q2)
@@ -310,7 +315,7 @@ KMO(q2)
 
 We see that the p value from the barlett test is very small, so we reject the null hypothesis. The overall MSA is greater that 0.6. Therefore, it makes sense to perform factor analysis to combine the variables.
 
-We determine the number of factors. There are three triangles between the red lines.
+We determine the number of factors. There are three triangles between the red lines and so we select 3 factors.
 
 ```{r}
 psych::fa.parallel(q2)
@@ -356,128 +361,23 @@ summary(scores$scores)
 
 Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. The executives are not quite sure how to examine it without going through individual surveys one by one, but they want you to see if there are any concepts or insights that arise from these responses. Do the free responses relate to the findings in a) or b) at all?
 
+A sentiment analysis model determines the overall sentiment of a document by comparing positive and negative words.
 ```{r}
-q3[ , 2:4 ][ q3[ , 2:4 ] == 1] <- "Food too expensive"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 2] <- "Shops/services too expensive"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 3] <- "Restaurants/food is good"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 4] <- "Shops are good"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 5] <- "Food is low quality/need better, more, or healthier selections"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 6] <- "Need better, more, or more unique restaurants"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 7] <- "Need better, more, or more unique shops"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 8] <- "Need restaurants/stores/clubs after security"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 9] <- "Need Starbucks/Peets/coffee house type restaurants (both before and after
-security)"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 10] <- "Need fast food/chain restaurants"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 11] <- "Shops/Restaurants need to be open more/not clean/not efficient"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 20] <- "Airport Layout-Terminals too far away/confusing/too difficult/takes too long to get around airport/no way to get between terminals after getting through security/domestic airlines in international terminal"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 21] <- "Better services/amenities in other terminals than in this one"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 22] <- "AC/Heat problems"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 23] <- "Moving walkways/escalators/elevators not working/not enough/need upgrading"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 24] <- "General cleanliness pos comment"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 25] <- "General cleanliness neg comment"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 26] <- "Positive comment about Airtrain"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 27] <- "Airtrain not convenient/slow/difficult to use/not enough seats"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 28] <- "Smoking areas-more needed/inconveniently located"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 29] <- "Restrooms-Not enough, not clean, missing amenities, too small, not enough hooks"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 30] <- "Facilities need upgrading/airport looks old/outdated"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 31] <- "Airport is crowded/More seating needed"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 32] <- "Baggage claim-Takes too long/hard to find/difficult to get to/disorganized"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 33] <- "Need better disabled access-ramps, carts"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 34] <- "Rental Car center too far away/difficult to get to/confusing/employees rude"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 35] <- "Parking too far away/not enough/hard to find /expensive"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 36] <- "Airport personnel positive comment"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 37] <- "Airport personnel negative comment"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 38] <- "Too many flight delays/bad weather/inefficient air traffic control"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 39] <- "Other Facilities Needed-children’s play areas, garden area, sleeping area,
-showers, business lounges, lockers, pet area, toiletries for sale in restrooms,
-food/water/soda vending machines, hot water/ice available everywhere"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 40] <- "General positive comments about SFO"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 41] <- "Need more duty-free rules/customs rules explained/improve dutyfree/customs experience"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 50] <- "Signage outside airport confusing/hard to get to airport/difficult to find
-correct terminal"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 51] <- "Signage inside airport confusing/small/hard to find gate or airline"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 52] <- "Need bilingual signs/announcements/personnel"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 53] <- "PA hard to understand/hear"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 54] <- "Information booth not staffed/personnel unhelpful/not knowledgeable"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 55] <- "Information screens-Too small/not enough/lack information/displays
-change too rapidly"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 56] <- "Signage to/from/on AirTrain/BART should be improved"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 57] <- "Add traffic delays/other information to flysfo.com to check before leaving"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 58] <- "Need information on transferring at the airport/what is OK to bring"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 59] <- "More humans/fewer electronic/automated signs"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 70] <- "Need more electrical outlets"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 71] <- "Need more artwork/exhibitions/change artwork more frequently"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 72] <- "Positive comment about artwork/exhibitions"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 73] <- "Wifi-not free long enough/difficult to access/doesn’t cover entire airport/overloaded/didn’t know was available"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 74] <- "Luggage carts-not enough/inconveniently located/should be free"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 75] <- "Need more entertainment- TV’s/Computers"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 76] <- "Need water fountains"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 77] <- "Other amenities-clocks, hand sanitizer, strollers, ATM’s, curbside check-in, payphone"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 78] <- "Positive comment about wifi"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 79] <- "Don’t like free speech booth/misleading/confusing"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 90] <- "Security/Customs lines/procedures long/inefficient/ineffective"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 91] <- "Security/Customs personnel inefficient/rude/not well trained"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 92] <- "Bart/ground transportation-Pos comment"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 93] <- "Bart/ground transportation Neg comment"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 94] <- "Airlines pos comment"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 95] <- "Airlines neg comment"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 96] <- "Positive comment about security"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 97] <- "Security should handle those with metal implants/pacemakers better"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 98] <- "Don’t appreciate people cutting in line/being allowed in front of me"
-q3[ , 2:4 ][ q3[ , 2:4 ] == 99] <- "Need more/other security measures (local security, more at night, cameras,
-lighting, etc.)"
+comments <- q3 %>% 
+  unnest_tokens(word, Q7_text_All)
+comments  %>%
+    inner_join(get_sentiments("nrc")) %>%
+    count(sentiment, sort = TRUE)
+comments %>%
+      inner_join(get_sentiments("bing")) %>%
+      count(sentiment, sort = TRUE)
 ```
+We see that there are more negative comments that positive comments.
 
-```{r}
-q3[ , 5:7 ][ q3[ , 5:7 ] == 1] <- "Restaurant tables not clean"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 2] <- "Restaurant clean/well maintained"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 3] <- "Restroom dirty/not cleaned often enough/wet floor"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 4] <- "Restroom facilities need repair/refurbishment/don’t work properly"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 5] <- "Restroom clean/well maintained"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 6] <- "Dyson Dryers positive comment"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 7] <- "Dyson Dryers negative comment"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 8] <- "Boarding/Security area dirty/not well maintained"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 9] <- "Rental car center dirty"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 10] <- "Construction making things dirty"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 11] <- "Excessive trash/trash cans not emptied"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 12] <- "General positive comment"
-q3[ , 5:7 ][ q3[ , 5:7 ] == 13] <- "General negative comment"
-```
-
-```{r}
-q3[ , 8:11][ q3[ , 8:11] == 1] <- "Long/slow/crowded/confusing security"
-q3[ , 8:11][ q3[ , 8:11] == 2] <- "Security was efficient/fine/good/personnel competent/friendly"
-q3[ , 8:11][ q3[ , 8:11] == 3] <- "Security personnel were good/tried to get those with earlier flights through"
-q3[ , 8:11][ q3[ , 8:11] == 4] <- "People jumped ahead of us because of procedures/resented having to wait
-longer while those in back of us went ahead"
-q3[ , 8:11][ q3[ , 8:11] == 5] <- "Racial/other profiling/felt harassed by security personnel"
-q3[ , 8:11][ q3[ , 8:11] == 6] <- "Security understaffed/not enough lanes open"
-q3[ , 8:11][ q3[ , 8:11] == 7] <- "Couldn’t find airline/gate/facility"
-q3[ , 8:11][ q3[ , 8:11] == 8] <- "Signage in boarding area poor quality/confusing/insufficient"
-q3[ , 8:11][ q3[ , 8:11] == 9] <- "Security can be cumbersome, but it’s necessary – don’t mind the procedure so much"
-q3[ , 8:11][ q3[ , 8:11] == 10] <- "Could have used better signage/clear signs on what can/cannot be brought through security"
-q3[ , 8:11][ q3[ , 8:11] == 11] <- "Tough to navigate security/walk to gate because of disability/impairment"
-q3[ , 8:11][ q3[ , 8:11] == 12] <- "Security personnel unprofessional/rude/not knowledgeable"
-q3[ , 8:11][ q3[ , 8:11] == 13] <- "Security procedures ineffective/cumbersome/illogical/too invasive"
-q3[ , 8:11][ q3[ , 8:11] == 14] <- "Security was quicker/easier for me than for others (airport/terminal/first class)"
-q3[ , 8:11][ q3[ , 8:11] == 15] <- "General negative comment"
-q3[ , 8:11][ q3[ , 8:11] == 16] <- "General positive comment"
-```
-
-```{r}
-library(wordcloud2)
-
-q3 %>% 
-  pivot_longer(cols = -RESPNUM) %>% 
-  na.omit() %>% 
-  unnest_tokens(word, value) %>% 
-  anti_join(c(stop_words, "airport")) %>% 
-  count(word, sort = TRUE) %>% 
-  filter(n > 25) %>% 
-  na.omit() %>% 
-  wordcloud2(shape = "cardioid")
-```
 ### Topic Model
+Topics models define the topics within a document. Combining all the comments regarding customers' overall satisfaction, our analysis determines the topics. 
+
+In choosing the number of topics, we focus on a high semantic coherence (how well the words hang together) and low residuals. We choose 20 topics.
 ```{r}
 SelectedData$Comments_For_Improvement_Txt
 
@@ -492,7 +392,7 @@ custom_stop_words <- c("General",
                        "neg",
                        "comment")
 
-df_text <- textProcessor(documents = missing_encoded$Comments_For_Improvement_Txt, 
+df_text <- textProcessor(documents = q3$Q7_text_All, 
                            metadata = missing_encoded, 
                            onlycharacter = TRUE,
                            customstopwords = c(tm::stopwords("SMART"), 
