@@ -12,6 +12,7 @@ library(sf)
 # loads in all data and builds summary tables 
 source('./read_data.R')
 
+
 ## Function for custom legends 
 addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, position){
     colorAdditions <- paste0(colors, "; border-radius: 50%; width:", sizes, "px; height:", sizes, "px")
@@ -24,56 +25,56 @@ addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, position)
 }
 
 
-# Define UI for application that draws a histogram
-ui <- fluidPage(
 
-    # Application title
-    titlePanel("Moving South Bend Forward"),
-
+ ui <- fluidPage(
+# 
+#     # Application title
+#     titlePanel("Moving South Bend Forward"),
+# 
+#     
+#     headerPanel(
+#             selectInput(inputId = "district",
+#                         "Council Disctrict:",
+#                         choices = demographics_sf$Council_Me,
+#                         selected = "All"
+#             )
+#         ),
+#     mainPanel(
+#         tabsetPanel(type = "tabs",
+#                     tabPanel("demographics", fluidPage(plotOutput("renters"),
+#                                                        plotOutput("age"),
+#                                                        htmlOutput('test'))),
+#                     tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
+#                     tabPanel("Map", leafletOutput(outputId = "map"))
+#         )
+#     )
     
-    headerPanel(
+    # second layout option (highlight + ctrl shift C to uncomment)
+    sidebarLayout(
+        sidebarPanel(
             selectInput(inputId = "district",
                         "Council Disctrict:",
-                        choices = demographics_sf$Council_Me,
+                        choices = c("Tim Scott",
+                                    "Regina Williams",
+                                    "Sharon McBride",
+                                    "Jo M. Broden",
+                                    "Dr. David Varner",
+                                    "Oliver Davis",
+                                    "All"
+                        ),#this may be fine, but for programming would not want to hard code
                         selected = "All"
-            )
+                        )
         ),
-    mainPanel(
-        tabsetPanel(type = "tabs",
-                    tabPanel("demographics", fluidPage(plotOutput("renters"),
-                                                       plotOutput("age"),
-                                                       HTML("<p style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Population density is</span></p>
-<p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:120px;line-height:107%;color:#2E75B6;\">Test</span></p>
-                                                                <p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Per Square Mile</span></p>"))),
-                    tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
-                    tabPanel("Map", leafletOutput(outputId = "map"))
+        mainPanel(
+            tabsetPanel(type = "tabs",
+                        tabPanel("demographics", fluidPage(htmlOutput('density'),
+                                                           plotOutput("renters"),
+                                                           plotOutput("age"))),
+                        tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
+                        tabPanel("Map", leafletOutput(outputId = "map"))
+            )
         )
     )
-    
-    ## second layout option (highlight + ctrl shift C to uncomment)
-    # sidebarLayout(
-    #     sidebarPanel(
-    #         selectInput(inputId = "district",
-    #                     "Council Disctrict:",
-    #                     choices = c("Tim Scott",
-    #                                 "Regina Williams",
-    #                                 "Sharon McBride",
-    #                                 "Jo M. Broden",
-    #                                 "Dr. David Varner",
-    #                                 "Oliver Davis",
-    #                                 "All"
-    #                     ),#this may be fine, but for programming would not want to hard code
-    #                     selected = "All"
-    #                     )
-    #     ),
-    #     mainPanel(
-    #         tabsetPanel(type = "tabs",
-    #                     tabPanel("demographics", verbatimTextOutput("demographics")),
-    #                     tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
-    #                     tabPanel("map", verbatimTextOutput("maps"))
-    #         )
-    #     )
-    # )
 )
 
 # Define server logic required to draw a histogram
@@ -112,7 +113,8 @@ server <- function(input, output, session) {
                                                           'Over 85')),
                                         `Pupulation Count` = value) %>% 
                                  ggplot(aes(x=`Age Group`, y=`Pupulation Count`)) +
-                                 geom_bar(width = 1,stat = 'identity')
+                                 geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                 scale_color_brewer(palette = "PuOr")  
                              )
     output$renters <- renderPlot(demographics_sf %>% 
                                      as_tibble() %>% 
@@ -129,8 +131,17 @@ server <- function(input, output, session) {
                                      geom_bar(width = 1, stat = "identity", color = "white") +
                                      geom_text(aes(y = lab.ypos, label = total), color = "white") +
                                      coord_polar("y", start=0) +
-                                     theme_void()               
+                                     theme_void()              
                                 )
+    output$density <- renderText(paste("<p style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Population density is</span></p>
+<p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:120px;line-height:107%;color:#00BFC4;\">",
+                                    demographics_sf %>%
+                                        as_tibble() %>%
+                                        filter(Council_Me == input$district) %>%
+                                        pull(pop_density) %>% 
+                                        round(),"</span></p>
+                                                                <p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Per Square Mile</span></p>"))
+
     #output$density <- render
     output$ammenities <- renderPrint("All sorts of public interest graphs")
     

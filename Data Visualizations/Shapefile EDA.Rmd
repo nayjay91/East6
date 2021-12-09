@@ -59,7 +59,7 @@ census <- census %>%
 census_transformed <- census %>% 
   select(geometry, GEOID, Population, contains('age'), contains('occupied')) %>% # Add relevant census metrics... 
   st_transform(crs = st_crs(city_council_dist)) %>% 
-  mutate(c_area = units::drop_units(st_area(.))) #what are the units for area?
+  mutate(c_area = units::drop_units(st_area(.))/2.59e+6) #Units are in square miles
   
 sf::sf_use_s2(FALSE) # reformat CRS to fix?? 
 # Set Buffer = 0 to fix city council topology
@@ -82,7 +82,7 @@ city_council_dist3 <- rbind(city_council_dist2, all_councils)
 
 
 demographics_sf <- sf::st_intersection(city_council_dist3, census_transformed) %>% 
-  mutate(in_area = units::drop_units(st_area(.))) %>% 
+  mutate(in_area = units::drop_units(st_area(.))/2.59e+6) %>% 
   ### Calc proportional census data based on area of intersection 
   mutate(pop = Population * in_area / c_area, 
          age_u5 = round(age_u5 * in_area / c_area),
@@ -120,14 +120,6 @@ demographics_sf <- sf::st_intersection(city_council_dist3, census_transformed) %
 
 ```
 
-```{r}
-ggplot() +
-    geom_sf(data = intrsct, aes(fill = pop_density), alpha = .5, lwd = .25) +
-    scale_fill_gradient(trans = "log10", 
-                        low = "white",
-                        high = "firebrick",
-                        labels = scales::comma_format())
-```
 #Business License Groupings
 ```{r}
 #### Categorize Business Data 
@@ -201,7 +193,7 @@ rm("food", "retail", "service", "entertainment","transportation","charitable","u
 ```{r}
 
 # Give business data same CRS as intersection 
-st_crs(business_licenses_df) <- st_crs(intrsct)
+st_crs(business_licenses_df) <- st_crs(census_transformed)
 
 # Businesses inside of council districts 
 bus_in_district_sf <- st_join(business_licenses_df, city_council_dist2, join = st_intersects) %>% 
@@ -222,7 +214,7 @@ leaflet()  %>%
 
 ```{r}
 # Give school data same CRS as intersection 
-st_crs(school_boundaries) <- st_crs(intrsct)
+st_crs(school_boundaries) <- st_crs(census_transformed)
 
 # centroids
 school_centroids <- st_centroid(school_boundaries)
@@ -236,7 +228,7 @@ school_boundaries_sf <- st_join(school_centroids, city_council_dist2, join = st_
 # Parks
 ```{r}
 # Give school data same CRS as intersection 
-st_crs(parks_df) <- st_crs(intrsct)
+st_crs(parks_df) <- st_crs(census_transformed)
 
 # Schools inside of council districts 
 parks_sf <- st_join(parks_df, city_council_dist2, join = st_intersects) %>% 
@@ -248,7 +240,7 @@ parks_sf <- st_join(parks_df, city_council_dist2, join = st_intersects) %>%
 
 ```{r}
 # Give school data same CRS as intersection 
-st_crs(public_facilities_df) <- st_crs(intrsct)
+st_crs(public_facilities_df) <- st_crs(census_transformed)
 
 # Public facilities inside of council districts 
 public_facilities_sf <- st_join(public_facilities_df, city_council_dist2, join = st_intersects) %>% 
@@ -267,7 +259,6 @@ write_rds(parks_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/F
 
 write_rds(public_facilities_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/public_facilities.rds")
 
-readRDS("C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/public_facilities.rds")
 ```
 
 
