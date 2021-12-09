@@ -40,7 +40,7 @@ ui <- fluidPage(
         ),
     mainPanel(
         tabsetPanel(type = "tabs",
-                    tabPanel("demographics", verbatimTextOutput("demographics")),
+                    tabPanel("demographics", plotOutput("renters")),
                     tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
                     tabPanel("Map", leafletOutput(outputId = "map"))
         )
@@ -78,6 +78,23 @@ server <- function(input, output, session) {
     
 
     output$demographics <- renderPrint("Demographics graphs")
+    output$renters <- renderPlot(demographics_sf %>% 
+                                     as_tibble() %>% 
+                                     filter(Council_Me == input$district) %>% 
+                                     rename('Owner Occupied' = 'owner_occupied','Renter Occupied' = 'renter_occupied') %>% 
+                                     pivot_longer(cols = c('Owner Occupied','Renter Occupied'),
+                                                  names_to = "Residence Type")  %>% 
+                                     group_by(`Residence Type`) %>% 
+                                     summarize(total = sum(value)) %>% 
+                                     mutate(prop = total/sum(total)) %>% 
+                                     arrange(desc(`Residence Type`)) %>%
+                                     mutate(lab.ypos = cumsum(prop) - 0.5*prop) %>% 
+                                     ggplot(aes(x="", y=prop, fill=`Residence Type`)) +
+                                     geom_bar(width = 1, stat = "identity", color = "white") +
+                                     geom_text(aes(y = lab.ypos, label = total), color = "white") +
+                                     coord_polar("y", start=0) +
+                                     theme_void()               
+    )
     output$ammenities <- renderPrint("All sorts of public interest graphs")
     
     output$map <- renderLeaflet({
