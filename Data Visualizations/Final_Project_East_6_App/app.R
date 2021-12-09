@@ -40,7 +40,7 @@ ui <- fluidPage(
         ),
     mainPanel(
         tabsetPanel(type = "tabs",
-                    tabPanel("demographics", plotOutput("renters")),
+                    tabPanel("demographics", plotOutput("age")),
                     tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
                     tabPanel("Map", leafletOutput(outputId = "map"))
         )
@@ -75,9 +75,41 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
     
-    
-
     output$demographics <- renderPrint("Demographics graphs")
+    output$age <- renderPlot(demographics_sf %>% 
+                                 as_tibble() %>% 
+                                 #filter(Council_Me == input$district) %>% 
+                                 select(starts_with("age"), Council_Me) %>% 
+                                 rename('Under 5' = 'age_u5',
+                                        '5-9' = 'age_5_9',
+                                        '11-14' = 'age_11_14',
+                                        '15-17' = 'age_15_17',
+                                        '18-24' = 'age_18_24',
+                                        '25-34' = 'age_25_34',
+                                        '35-44' = 'age_35_44',
+                                        '45-54' = 'age_45_54',
+                                        '55-64' = 'age_55_64',
+                                        '65-74' = 'age_65_74',
+                                        '75-84' = 'age_75_84',
+                                        'Over 85' = 'age_o85') %>%
+                                 pivot_longer(cols = -Council_Me) %>% 
+                                 mutate(`Age Group` = factor(name, ordered = TRUE, 
+                                               levels = c('Under 5',
+                                                          '5-9',
+                                                          '11-14',
+                                                          '15-17',
+                                                          '18-24',
+                                                          '25-34',
+                                                          '35-44',
+                                                          '45-54',
+                                                          '55-64',
+                                                          '65-74',
+                                                          '75-84',
+                                                          'Over 85')),
+                                        `Pupulation Count` = value) %>% 
+                                 ggplot(aes(x=`Age Group`, y=`Pupulation Count`)) +
+                                 geom_bar(width = 1,stat = 'identity')
+                             )
     output$renters <- renderPlot(demographics_sf %>% 
                                      as_tibble() %>% 
                                      filter(Council_Me == input$district) %>% 
@@ -94,7 +126,8 @@ server <- function(input, output, session) {
                                      geom_text(aes(y = lab.ypos, label = total), color = "white") +
                                      coord_polar("y", start=0) +
                                      theme_void()               
-    )
+                                )
+    output$density <- render
     output$ammenities <- renderPrint("All sorts of public interest graphs")
     
     output$map <- renderLeaflet({
