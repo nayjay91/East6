@@ -40,7 +40,11 @@ ui <- fluidPage(
         ),
     mainPanel(
         tabsetPanel(type = "tabs",
-                    tabPanel("demographics", fluidPage(plotOutput("renters"),plotOutput("age"))),
+                    tabPanel("demographics", fluidPage(plotOutput("renters"),
+                                                       plotOutput("age"),
+                                                       HTML("<p style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Population density is</span></p>
+<p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:120px;line-height:107%;color:#2E75B6;\">Test</span></p>
+                                                                <p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Per Square Mile</span></p>"))),
                     tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
                     tabPanel("Map", leafletOutput(outputId = "map"))
         )
