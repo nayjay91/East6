@@ -193,9 +193,9 @@ business_licenses_df <- business_licenses_df %>%
                                  Classifi_1 %in% entertainment ~ 'Entertainment',
                                  TRUE ~ 'Unclassified')
          ) %>% 
-  filter(!business_type == "Unclassified")
+  filter(business_type != "Unclassified")
 
-
+rm("food", "retail", "service", "entertainment","transportation","charitable","unclassified")
 ```
 # Business License Locations 
 ```{r}
@@ -207,13 +207,6 @@ st_crs(business_licenses_df) <- st_crs(intrsct)
 bus_in_district_sf <- st_join(business_licenses_df, city_council_dist2, join = st_intersects) %>% 
   dplyr::select(License_Ye, Business_N, Street_Add, Business_P, business_type, OBJECTID, Classifi_1, Dist, Council_Me) %>% 
   filter(is.na(Council_Me) == FALSE)
-
-# convert from sf to tibble to aggregate 
-bus_in_distric_df <- bus_in_district_sf %>% 
-  tibble() %>% 
-  group_by(Dist, Council_Me, business_type) %>% 
-  summarise(n = n())
-
 ```
 #Business License Viz
 ```{r}
@@ -224,12 +217,6 @@ bus_in_district_sf$popup <- paste("<b>",bus_in_district_sf$Business_N,"</b><br>"
 leaflet()  %>%
   addTiles()  %>%
   addCircleMarkers(data = bus_in_district_sf, stroke = 0, fillOpacity = 1, radius = 4) 
-```
-
-```{r}
-ggplot(data = bus_in_distric_df, aes(x = n, y = business_type)) +
-  geom_col() +
-  facet_grid(~Council_Me)
 ```
 # Schools
 
@@ -244,12 +231,6 @@ school_centroids <- st_centroid(school_boundaries)
 school_boundaries_sf <- st_join(school_centroids, city_council_dist2, join = st_intersects) %>% 
   dplyr::select(School, SchoolType, Dist, Council_Me) %>% 
   filter(is.na(Council_Me) == FALSE)
-
-# convert from sf to tibble to aggregate 
-school_in_distric_df <- school_boundaries_sf %>% 
-  tibble() %>% 
-  group_by(SchoolType, Council_Me) %>% 
-  summarise(n = n())
 ```
 
 # Parks
@@ -261,12 +242,6 @@ st_crs(parks_df) <- st_crs(intrsct)
 parks_sf <- st_join(parks_df, city_council_dist2, join = st_intersects) %>% 
   dplyr::select(Park_Name, Park_Type, Dist, Council_Me) %>% 
   filter(is.na(Council_Me) == FALSE)
-
-# convert from sf to tibble to aggregate 
-parks_summary <- parks_sf %>% 
-  tibble() %>% 
-  group_by(Park_Type, Council_Me) %>% 
-  summarise(n = n())
 ```
 
 # Public Works
@@ -279,14 +254,8 @@ st_crs(public_facilities_df) <- st_crs(intrsct)
 public_facilities_sf <- st_join(public_facilities_df, city_council_dist2, join = st_intersects) %>% 
   dplyr::select(POPL_NAME, POPL_TYPE, Dist, Council_Me) %>% 
   filter(is.na(Council_Me) == FALSE)
-
-# convert from sf to tibble to aggregate 
-public_facilities_summary <- public_facilities_sf %>% 
-  tibble() %>% 
-  group_by(POPL_TYPE, Council_Me) %>% 
-  summarise(n = n())
 ```
-#write data
+=#write data
 ```{r}
 write_rds(demographics_sf,"C:/Users/Nathan/Documents/GitHub/East6/Data Visualizations/Final_Project_East_6_App/data/demographics.rds")
 
