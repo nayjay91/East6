@@ -147,7 +147,7 @@ glimpse(SelectedData)
 
 MAY NEED TO DO THIS Addressing missing data The clustering process has remove NA's as a step. This removed about 1000 rows. We would likely need to create values for all variables though, and it seemed like mice filed in the y variable based on the multiple x's.
 
-```{r}
+```{r,echo=FALSE, message= FALSE}
 library(psych)
 library(mice)
 ```
@@ -192,29 +192,33 @@ q3 <- SFOdata %>% select(RESPNUM,Q7_text_All)
 
 Customers were asked to rate their opinion of the "SFO Airport as a whole" on a scale from 1 ("unacceptable") to 5 ("outstanding"). The executives want to know if there are patterns across the satisfied or dissatisfied customers based on demographic characteristics, such as sex, age group, and income level.
 
-We can see how the individual demographics (age, income, gender) relate to the overall satisfaction.
+We can see how the individual demographics (age, income, gender) relate to the overall satisfaction through plotting the individual demographics. To determine if there are patterns across the level of satisfaction based on demographic characteristics, we can use clustering for our analysis so that we can see how the different customers are grouped. 
+
+Clustering allows us to combine the different demographics and then group similar objects together. Cluster models assign observations based on the distance of a central point (such as the mean). Since our data has variables that contain a mean (since the responses are based on a scale of 1-5), we can use the mean as the center of our cluster. We can use this unsupervised machine learning method to identify the observations to find the different categories of the SFO customers.
 
 
-The age group 25-34 filled out the most survey. Ratings of 4 were the most prevalent across all age groups.
+First, we understand the trends of each individual demographic.
+
+1. Age: From the histogram, the age group 25-34 filled out the most survey. Ratings of 4 were the most prevalent across all age groups.
 ```{r}
 ggplot(data = q1,aes(x=as.factor(Age), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Age")+scale_x_discrete(labels=c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older","Don't know/refused")) +ylab("Proportion") +ggtitle("Satisfaction by Age")+ scale_fill_discrete(name = "Satisfaction")+theme(axis.text.x = element_text(angle=45))
 ```
 
-More males completed the surveys than females. Both rated the airport as 4 the most.
+2. Gender: From the histogram, more males completed the surveys than females. Both rated the airport as 4 the most.
 ```{r}
 ggplot(data = q1,aes(x=as.factor(Gender), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Gender") +ylab("Proportion")+scale_x_discrete(labels=c("Male","Female")) +ggtitle("Satisfaction by Gender")+ scale_fill_discrete(name = "Satisfaction")
 ```
 
-Those with an income of 50,000 to 100,000 completed the survey. All income groups rated the airport as 4 the most.
+3. Income: From the histogram, those with an income of $50,000 to $100,000 completed the survey. All income groups rated the airport as 4 the most.
 ```{r}
 ggplot(data = q1,aes(x=as.factor(Income_code), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Income") +ylab("Proportion")+scale_x_discrete(labels = c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")) +ggtitle("Satisfaction by Income")+ scale_fill_discrete(name = "Satisfaction")
 ```
 
-To determine if there are patterns across demographic groups, we used clustering to determine how the customers are grouped.Clustering allows us to combine the different demographics and then group similar objects together.
-```{r,message = F}
+Next, we identify any patterns across all demographics. 
+```{r,echo=FALSE, message= FALSE}
 library(factoextra)
 library(cluster)
 library(mclust)
@@ -223,7 +227,7 @@ library(NbClust)
 library(lavaan)
 ```
 
-First, we must determine how many clusters to use. This number is the number of groups that the different objects will be grouped in. We see from the graph below to use 4 groups.
+We must determine how many clusters to use. This number is the number of groups that the different objects will be grouped in. We see from the graph below to use 4 groups.
 ```{r}
 q1 %>% 
   scale() %>% 
@@ -231,7 +235,7 @@ q1 %>%
   fviz_nbclust(x = ., FUNcluster = kmeans, method = "gap")
 ```
 
-Used the kmeans test, where the different groups are formed by the closest observations to the mean of the cluster. This test does not respond well to outliers. However, since the data is based on 5 discrete responses, there will not be any outliers.
+We used the kmeans test, where the different groups are formed by the closest observations to the mean of the cluster. This test does not respond well to outliers. However, since the data is based on 5 discrete responses, there will not be any outliers.
 
 ```{r}
 kmeansTest <-  kmeans(x = scale(na.omit(q1)), centers = 4)
@@ -283,14 +287,16 @@ Cluster 4: 45-54, Around 150k, male, satisfactory
 
 The executives also want to know if customer satisfaction can be broken down into different attributes of the airport. Knowing this will help the team target specific strengths or areas of improvement. The central feature the customer satisfaction survey is a 14-question portion of the survey asking customers to rate satisfaction with different aspects of the airport (see Question 6 in the data directory). The executives want you to perform a quantitative analysis to determine if there are broad themes that emerge from this part of the survey.
 
-```{r}
+To determine how customers rated each individual aspect of the airport, we can plot the airport aspect with the customer satisfaction. To determine if there are any broad themes, we used factor analysis.
+
+Factor analysis is when we explain the covariance or correlation among the variables. Factors represent some underlying construct of satisfaction. The factors are unobservable variables that can reduce the number of observed variables. 
+```{r,echo=FALSE, message= FALSE}
 library(psych)
 library(lavaan)
 library(ggcorrplot)
 ```
 
 The customer satisfaction by each individual airport aspect can be seen as the following. We see that the highest ratings are 3s and 4s for most of the airport aspects. 
-
 ```{r}
 q2 %>% pivot_longer(cols = ends_with("0_6")) %>%
 #na.omit() %>%
@@ -301,10 +307,7 @@ facet_wrap(~name, nrow = 4) +
 xlab('Rating')
 ```
 
-To see the broad themes among the responses, we can use factor analysis. Factor analysis can observe if there are any latent variables (or unobservable variables) across these variables to contribute towards customer satisfaction.
-
-We first determine if factor analysis can be performed on this data set.
-
+We then perform factor analysis to identify and analyze the latent variables. However, we first determine if factor analysis can be performed on this data set.
 ```{r}
 cortest.bartlett(q2)
 ```
@@ -313,10 +316,9 @@ cortest.bartlett(q2)
 KMO(q2)
 ```
 
-We see that the p value from the barlett test is very small, so we reject the null hypothesis. The overall MSA is greater that 0.6. Therefore, it makes sense to perform factor analysis to combine the variables.
+We see that the p value from the barlett test is very small, so we reject the null hypothesis that the variables are not correlated. The overall MSA is greater that 0.6. Therefore, it makes sense to perform factor analysis to combine the variables.
 
 We determine the number of factors. There are three triangles between the red lines and so we select 3 factors.
-
 ```{r}
 psych::fa.parallel(q2)
 ```
@@ -325,17 +327,7 @@ psych::fa.parallel(q2)
 scree(q2)
 ```
 
-We will use 3 factors moving forward.
-
-We then fit the model with no rotation.
-
-```{r}
-x2 <- fa(r = q2, nfactors = 3, rotate = "none")
-x2
-```
-
-For further analysis, I used oblique rotation since we want factors that are correlated.
-
+We will use 3 factors moving forward.We then fit the model with oblique rotation since we want factrs that are correlated.
 ```{r}
 x3 <- fa(r = q2, nfactors = 3, rotate = "promax")
 x3
@@ -361,7 +353,21 @@ summary(scores$scores)
 
 Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. The executives are not quite sure how to examine it without going through individual surveys one by one, but they want you to see if there are any concepts or insights that arise from these responses. Do the free responses relate to the findings in a) or b) at all?
 
-A sentiment analysis model determines the overall sentiment of a document by comparing positive and negative words.
+We will develop a sentiment analysis model to determines the overall sentiment of a document by comparing positive and negative words. Since the comments are text based fields, we can look at the specific model of the comments to determine the overall sentiment. 
+
+For more specific analysis, we will develop a topic model. Topics models define the topics within a document. Combining all the comments regarding customers' overall satisfaction, our analysis determines the topics.
+
+```{r,echo=FALSE, message= FALSE}
+library(tidytext)
+library(sentimentr)
+library(textdata)
+library(wordcloud)
+library(wordcloud2)
+library(stm)
+library(tm)
+```
+
+We see that there are more negative comments that positive comments in our sentiment model.
 ```{r}
 comments <- q3 %>% 
   unnest_tokens(word, Q7_text_All)
@@ -372,15 +378,11 @@ comments %>%
       inner_join(get_sentiments("bing")) %>%
       count(sentiment, sort = TRUE)
 ```
-We see that there are more negative comments that positive comments.
+
 
 ### Topic Model
-Topics models define the topics within a document. Combining all the comments regarding customers' overall satisfaction, our analysis determines the topics. 
-
-In choosing the number of topics, we focus on a high semantic coherence (how well the words hang together) and low residuals. We choose 20 topics.
+In choosing the number of topics, we focus on a high semantic coherence (how well the words hang together) and low residuals. We choose 20 topics based on the graphs.
 ```{r}
-SelectedData$Comments_For_Improvement_Txt
-
 custom_stop_words <- c("General", 
                        "positive", 
                        "negative",
@@ -419,6 +421,7 @@ topics <-  stm(documents = df_Prep$documents,
              max.em.its = 200)
 ```
 
+The plot and the labels represent the different topics from the comments.
 ```{r}
 plot(topics)
 labelTopics(topics)
