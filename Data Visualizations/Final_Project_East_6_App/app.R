@@ -40,7 +40,7 @@ ui <- fluidPage(
         ),
     mainPanel(
         tabsetPanel(type = "tabs",
-                    tabPanel("demographics", plotOutput("age")),
+                    tabPanel("demographics", fluidPage(plotOutput("renters"),plotOutput("age"))),
                     tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
                     tabPanel("Map", leafletOutput(outputId = "map"))
         )
@@ -78,7 +78,7 @@ server <- function(input, output, session) {
     output$demographics <- renderPrint("Demographics graphs")
     output$age <- renderPlot(demographics_sf %>% 
                                  as_tibble() %>% 
-                                 #filter(Council_Me == input$district) %>% 
+                                 filter(Council_Me == input$district) %>% 
                                  select(starts_with("age"), Council_Me) %>% 
                                  rename('Under 5' = 'age_u5',
                                         '5-9' = 'age_5_9',
@@ -127,7 +127,7 @@ server <- function(input, output, session) {
                                      coord_polar("y", start=0) +
                                      theme_void()               
                                 )
-    output$density <- render
+    #output$density <- render
     output$ammenities <- renderPrint("All sorts of public interest graphs")
     
     output$map <- renderLeaflet({
