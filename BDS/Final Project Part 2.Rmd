@@ -201,9 +201,16 @@ First, we understand the trends of each individual demographic.
 
 1. Age: From the histogram, the age group 25-34 filled out the most survey. Ratings of 4 were the most prevalent across all age groups.
 ```{r}
-ggplot(data = q1,aes(x=as.factor(Age), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
-  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Age")+scale_x_discrete(labels=c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older","Don't know/refused")) +ylab("Proportion") +ggtitle("Satisfaction by Age")+ scale_fill_discrete(name = "Satisfaction")+theme(axis.text.x = element_text(angle=45))
+ggplot(data = q1,aes(x=as.factor(Age), y = ..count../sum(..count..), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+  geom_bar() +
+  xlab("Age") + 
+  scale_x_discrete(labels=c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older","Don't know/refused")) + 
+  ylab("Proportion") + 
+  ggtitle("Satisfaction by Age") + 
+  scale_fill_discrete(name = "Satisfaction") + 
+  theme(axis.text.x = element_text(angle=45))
 ```
+
 
 2. Gender: From the histogram, more males completed the surveys than females. Both rated the airport as 4 the most.
 ```{r}
@@ -240,7 +247,7 @@ We used the kmeans test, where the different groups are formed by the closest ob
 ```{r}
 kmeansTest <-  kmeans(x = scale(na.omit(q1)), centers = 4)
 
-fviz_cluster(kmeansTest, scale(na.omit(q1)))
+fviz_cluster(kmeansTest, scale(na.omit(q1)), geom = "point")
 ```
 
 We can view the values of the centers of the clusters.
@@ -416,7 +423,7 @@ plot(kTest)
 ```{r}
 topics <-  stm(documents = df_Prep$documents, 
              vocab = df_Prep$vocab, 
-             K = 5, #change this to whatever the plot shows best
+             K = 20, #change this to whatever the plot shows best
              verbose = F,
              max.em.its = 200)
 ```
@@ -430,4 +437,50 @@ labelTopics(topics)
 
 # Part B
 Do particular groups of passengers have more trouble with signage (one of the most commented issue areas) than others? i.e can accessibility be improved by identifying and targeting improvements for at risk groups. Possible variables to investigate: "Age", "Gender", "Income_code", "Destination_Market", "Destination_Geo_Loc"
+
+-- Add responses w/ relevant security issue topics from q3 or satisfaction scores 
+
+```{r}
+
+part_b <-  missing_encoded %>% 
+  select(Age, 
+         Gender,
+         Income_code, 
+         Destination_Market, # airport size, can probably remove 
+         Destination_Geo_Loc, # destination US region or foreign continent 
+         Signs_and_directions_inside_SFO_0_6, 
+         Signs_and_directsion_on_roadways_0_6) %>% 
+  mutate(Destination_Geo_Loc = as.factor(Destination_Geo_Loc))
+
+# Give names to Dest Geo
+levels(part_b$Destination_Geo_Loc) <- c('US-West', 'US-East', 'US-Mid', 'CA/MX', 'C/S Am', 'EUR', 'ME', 'Asia', 'AUS/NZ')
+
+```
+
+```{r}
+## TODO:
+## [] Give Satisfaction gradient scale
+## [] Fix proportion to equal 100%
+## [] Name 
+
+part_b_geo_prop <- part_b %>% 
+  group_by(Destination_Geo_Loc) %>% 
+  summarise(n_geo = n()) %>% 
+  left_join(part_b %>% 
+              group_by(Destination_Geo_Loc, Signs_and_directions_inside_SFO_0_6) %>% 
+              summarise(n_sd_inside_sat = n())) %>% 
+  mutate(geo_prop = (n_sd_inside_sat / n_geo) * 100)
+
+
+
+ggplot(data = part_b_geo_prop, aes(x= as.factor(Signs_and_directions_inside_SFO_0_6), y = geo_prop, fill = as.factor(Signs_and_directions_inside_SFO_0_6))) +
+  geom_col(position = 'dodge') +
+  facet_wrap(Destination_Geo_Loc ~ .) +
+  ylab("Proportion (%)") +
+  xlab("Satisfaction") + 
+  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
+  
+```
+
+
 
