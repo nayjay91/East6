@@ -82,6 +82,7 @@ server <- function(input, output, session) {
     
     output$map <- renderLeaflet({
         ## TODO: 
+        ## [] Population density layer (& fix All polygons)
         ## [] Fix colors... add symbols? 
         ## [] Filter by types?? separate layer controls?
         
