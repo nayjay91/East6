@@ -138,20 +138,10 @@ Encode missing data
 missing_encoded <- SelectedData %>% 
   select(-starts_with("Com_"),-Usefulness_of_website) %>% 
 #  mutate_at( vars(ends_with("0_6")),~as.factor(.)) %>% 
-  mutate_at( vars(ends_with("0_6")),~car::recode(.,"6= NA;0= NA")) 
+  mutate_at( vars(ends_with("0_6")),~car::recode(.,"6= NA;0= NA")) %>%
+  mutate_at( vars(ends_with("Age")),~car::recode(.,"8= NA;0= NA")) #recoded 8 to be NA
 ```
 
-```{r}
-glimpse(missing_encoded)
-glimpse(SelectedData)
-```
-
-MAY NEED TO DO THIS Addressing missing data The clustering process has remove NA's as a step. This removed about 1000 rows. We would likely need to create values for all variables though, and it seemed like mice filed in the y variable based on the multiple x's.
-
-```{r,echo=FALSE, message= FALSE}
-library(psych)
-library(mice)
-```
 
 Created a subset of data with the overall customer satisfaction scores and the demographic variables.
 
@@ -201,7 +191,36 @@ Clustering allows us to combine the different demographics and then group simila
 First, we understand the trends of each individual demographic.
 
 1. Age: From the histogram, the age group 25-34 filled out the most survey. Ratings of 4 were the most prevalent across all age groups.
+
 ```{r}
+q1_rev <- q1 %>% 
+  mutate(Age = as.factor(Age))
+
+# Give names to Age
+levels(q1_rev$Age) <- c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older")
+```
+```{r}
+q1_prop <- q1_rev %>% 
+  group_by(Age) %>% 
+  summarise(n_age = n()) %>% 
+  left_join(q1_rev %>% 
+              group_by(Age, CFO_Airport_as_a_whole_0_6) %>% 
+              summarise(n_sd_inside_sat = n())) %>% 
+  mutate(age_prop = (n_sd_inside_sat / n_age) * 100)
+
+
+
+ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = age_prop, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+  geom_col(position = 'dodge') +
+  facet_wrap(Age ~ .) +
+  ylab("Proportion (%)") +
+  xlab("Satisfaction") + 
+  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
+```
+
+
+```{r}
+#Can delete this if other plot works
 ggplot(data = q1,aes(x=as.factor(Age), y = ..count../sum(..count..), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar() +
   xlab("Age") + 
@@ -215,11 +234,62 @@ ggplot(data = q1,aes(x=as.factor(Age), y = ..count../sum(..count..), fill = as.f
 
 2. Gender: From the histogram, more males completed the surveys than females. Both rated the airport as 4 the most.
 ```{r}
+q1_rev <- q1_rev %>% 
+  mutate(Gender = as.factor(Gender))
+
+# Give names to Gender
+levels(q1_rev$Gender) <- c("Male","Female")
+```
+```{r}
+q1_prop <- q1_rev %>% 
+  group_by(Gender) %>% 
+  summarise(n_gender = n()) %>% 
+  left_join(q1_rev %>% 
+              group_by(Gender, CFO_Airport_as_a_whole_0_6) %>% 
+              summarise(n_sd_inside_sat = n())) %>% 
+  mutate(gender_prop = (n_sd_inside_sat / n_gender) * 100)
+
+
+
+ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = gender_prop, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+  geom_col(position = 'dodge') +
+  facet_wrap(Gender ~ .) +
+  ylab("Proportion (%)") +
+  xlab("Satisfaction") + 
+  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
+```
+```{r}
 ggplot(data = q1,aes(x=as.factor(Gender), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Gender") +ylab("Proportion")+scale_x_discrete(labels=c("Male","Female")) +ggtitle("Satisfaction by Gender")+ scale_fill_discrete(name = "Satisfaction")
 ```
 
-3. Income: From the histogram, those with an income of $50,000 to $100,000 completed the survey. All income groups rated the airport as 4 the most.
+3. Income: From the histogram, those with an income of $50,000 to $100,000 had the highet response rate of the survey. Most of the income groups rated the airport as 4 the most.
+
+```{r}
+q1_rev <- q1_rev %>% 
+  mutate(Income_code = as.factor(Income_code))
+
+# Give names to Income
+levels(q1_rev$Income_code) <- c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")
+```
+```{r}
+q1_prop <- q1_rev %>% 
+  group_by(Income_code) %>% 
+  summarise(n_income = n()) %>% 
+  left_join(q1_rev %>% 
+              group_by(Income_code, CFO_Airport_as_a_whole_0_6) %>% 
+              summarise(n_sd_inside_sat = n())) %>% 
+  mutate(income_prop = (n_sd_inside_sat / n_income) * 100)
+
+
+
+ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = income_prop, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+  geom_col(position = 'dodge') +
+  facet_wrap(Income_code ~ .) +
+  ylab("Proportion (%)") +
+  xlab("Satisfaction") + 
+  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
+```
 ```{r}
 ggplot(data = q1,aes(x=as.factor(Income_code), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Income") +ylab("Proportion")+scale_x_discrete(labels = c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")) +ggtitle("Satisfaction by Income")+ scale_fill_discrete(name = "Satisfaction")
@@ -491,6 +561,62 @@ ggplot(data = part_b_geo_prop, aes(x= as.factor(Signs_and_directions_inside_SFO_
   scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
   
 ```
+
+LCA is used with discrete data, such as survey responses since it only works with categorical data. Since the dataset is not made up of one homogenous group, it is better modeled by multiple groups that are characterized by unique response propensities. We then recevie profiles for the different groups.
+
+
+```{r}
+#Create the responses as factors
+part_b <-  missing_encoded %>% 
+  select(Age, 
+         Gender,
+         Income_code, 
+         Destination_Geo_Loc, # destination US region or foreign continent 
+         Signs_and_directions_inside_SFO_0_6, 
+         Signs_and_directsion_on_roadways_0_6) %>% 
+  mutate(Destination_Geo_Loc = as.factor(Destination_Geo_Loc))
+part_b$Age <- sapply(part_b$Age, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5,6,7)))))
+part_b$Gender <- sapply(part_b$Gender, function(x) (as.numeric(factor(x,levels = c(1,2)))))
+part_b$Income_code <- sapply(part_b$Income_code, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5)))))
+part_b$Signs_and_directions_inside_SFO_0_6 <- sapply(part_b$Signs_and_directions_inside_SFO_0_6, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5)))))
+part_b$Signs_and_directsion_on_roadways_0_6 <- sapply(part_b$Signs_and_directsion_on_roadways_0_6, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5)))))
+part_b$Destination_Geo_Loc <- sapply(part_b$Destination_Geo_Loc, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5,6,7,8,9,10)))))
+```
+We create different models with different  number of classes. We then determine which model is the best to use.
+```{r,echo=FALSE, message= FALSE}
+library(poLCA)
+```
+```{r}
+lcaFormula <-  cbind(Age, 
+         Gender,
+         Income_code, 
+         Destination_Geo_Loc, 
+         Signs_and_directions_inside_SFO_0_6, 
+         Signs_and_directsion_on_roadways_0_6) ~ 1
+lcaMod2 <-  poLCA(lcaFormula,part_b, nclass = 2, maxiter = 5000)
+lcaMod3 <-  poLCA(lcaFormula,part_b, nclass = 3, maxiter = 5000)
+lcaMod4 <-  poLCA(lcaFormula,part_b, nclass = 4, maxiter = 5000)
+lcaMod5 <-  poLCA(lcaFormula,part_b, nclass = 5, maxiter = 5000)
+lcaMod6 <-  poLCA(lcaFormula,part_b, nclass = 6, maxiter = 5000)
+```
+To determine which is the best model, we compare AIC for statistical criterion. We see that class 3 has the lowest AIC and so is the best model to use.
+```{r}
+rbind(class2 = lcaMod2$aic,
+  class3 = lcaMod3$aic, 
+      class4 = lcaMod4$aic, 
+      class5 = lcaMod5$aic,
+  class6 = lcaMod6$aic)
+```
+
+The plot below visualizes the three different profiles from the customers.
+```{r}
+plot(lcaMod3)
+```
+The three classes of customers are the following build out three distinct profiles from the customers in relation to signage:
+Class 1: Around the age of 35-44, with a salary between $50k-$150k, travelings within the United States, finds the signs and directions in SFO are very good, and the signage on SFO roadways as satisfactory.
+Class 2: Young adults (age 18-34) with a a lower salary (under $50k) traveling within the United States find the signs and directions in SFO as very good with the signage of SFO roadways as satisfactory.
+Class 3: Adults older than 45 with a salary between $50k-$100k traveling within the United States, find the signs and directions in SFO as excellent while the signage on SFO roadways are very positive. 
+
 
 
 
