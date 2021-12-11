@@ -67,11 +67,15 @@ addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, position)
         ),
         mainPanel(
             tabsetPanel(type = "tabs",
-                        tabPanel("demographics", fluidPage(htmlOutput('density'),
+                        tabPanel("Demographics", fluidPage(htmlOutput('density'),
                                                            plotOutput("renters"),
                                                            plotOutput("age"))),
-                        tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
-                        tabPanel("Map", leafletOutput(outputId = "map"))
+                        tabPanel("Commercial and Public Entities", verbatimTextOutput("ammenities"),
+                                 plotOutput("business"),
+                                 plotOutput("facilities"),
+                                 plotOutput("parks"),
+                                 plotOutput("schools")),
+                        tabPanel("Map of South Bend", leafletOutput(outputId = "map"))
             )
         )
     )
@@ -111,10 +115,10 @@ server <- function(input, output, session) {
                                                           '65-74',
                                                           '75-84',
                                                           'Over 85')),
-                                        `Pupulation Count` = value) %>% 
-                                 ggplot(aes(x=`Age Group`, y=`Pupulation Count`)) +
+                                        `Population Count` = value) %>% 
+                                 ggplot(aes(x=`Age Group`, y=`Population Count`)) +
                                  geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
-                                 scale_color_brewer(palette = "PuOr")  
+                                 scale_color_brewer(palette = "PuOr") + ggtitle("Distribution of South Bend Residents' Ages") 
                              )
     output$renters <- renderPlot(demographics_sf %>% 
                                      as_tibble() %>% 
@@ -131,7 +135,7 @@ server <- function(input, output, session) {
                                      geom_bar(width = 1, stat = "identity", color = "white") +
                                      geom_text(aes(y = lab.ypos, label = total), color = "white") +
                                      coord_polar("y", start=0) +
-                                     theme_void()              
+                                     theme_void()  + ggtitle("Residences Owned vs. Rented")            
                                 )
     output$density <- renderText(paste("<p style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Population density is</span></p>
 <p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:120px;line-height:107%;color:#00BFC4;\">",
@@ -144,7 +148,47 @@ server <- function(input, output, session) {
 
     #output$density <- render
     output$ammenities <- renderPrint("All sorts of public interest graphs")
-    
+    output$business <- renderPlot(bus_summary %>% 
+                                     as_tibble() %>% 
+                                     filter(Council_Me == input$district) %>% 
+                                     mutate(`Business Type` = factor(business_type, ordered = TRUE, 
+                                                                  levels = c('Food',
+                                                                             'Retail',
+                                                                             'Service',
+                                                                             'Entertainment',
+                                                                             'Transportation',
+                                                                             'Charitable',
+                                                                             'Unclassified')),
+                                            `Business Count` = n) %>%
+                                      ggplot(aes(x=`Business Type`, y=`Business Count`)) +
+                                      geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Businesses by Business Type")
+
+    )
+    output$facilities <- renderPlot(public_facilities_summary %>% 
+                                      as_tibble() %>% 
+                                      filter(Council_Me == input$district) %>% 
+                                      mutate(`Facilties Type` = POPL_TYPE,
+                                             `Facilities Count` = n) %>%
+                                      ggplot(aes(x=`Facilties Type`, y=`Facilities Count`)) +
+                                      geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Public Facilities by Facility Type") )
+    output$parks <- renderPlot(parks_summary %>% 
+                                      as_tibble() %>% 
+                                      filter(Council_Me == input$district) %>% 
+                                      mutate(`Parks Type` = Park_Type,
+                                             `Parks Count` = n) %>%
+                                      ggplot(aes(x=`Parks Type`, y=`Parks Count`)) +
+                                      geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Parks by Park Type") )
+    output$schools <- renderPlot(school_summary %>% 
+                                      as_tibble() %>% 
+                                      filter(Council_Me == input$district) %>% 
+                                      mutate(`School Type` = SchoolType,
+                                             `School Count` = n) %>%
+                                      ggplot(aes(x=`School Type`, y=`School Count`)) +
+                                      geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Private and Public Schools") )
     output$map <- renderLeaflet({
         ## TODO: 
         ## [] Population density layer (& fix All polygons)
