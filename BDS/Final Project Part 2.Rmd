@@ -114,25 +114,25 @@ newnames = c("Artwork_and_exihibits_0_6",
 ## Rename and recode comments for improvements and web features
 SelectedData <- SFOdata %>% 
   rename_at(vars(all_of(oldnames)), ~ newnames) %>% 
-  select(all_of(newnames), RESPNUM) %>% 
+  dplyr::select(all_of(newnames), RESPNUM) %>% 
   left_join(CommentForImprovement, by = c("Com_For_Improve1" = "Key")) %>% 
   mutate(Com_For_Improve1 = CommentForImprovement) %>% 
-  select(-CommentForImprovement) %>% 
+  dplyr::select(-CommentForImprovement) %>% 
   left_join(CommentForImprovement, by = c("Com_For_Improve2" = "Key")) %>% 
   mutate(Com_For_Improve2 = CommentForImprovement) %>% 
-  select(-CommentForImprovement) %>% 
+  dplyr::select(-CommentForImprovement) %>% 
   left_join(CommentForImprovement, by = c("Com_For_Improve3" = "Key")) %>% 
   mutate(Com_For_Improve3 = CommentForImprovement) %>% 
-  select(-CommentForImprovement) %>% 
+  dplyr::select(-CommentForImprovement) %>% 
   left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_1" = "key")) %>% 
   mutate(Com_Useful_feature_of_website_1 = WebFeature) %>% 
-  select(-WebFeature) %>% 
+  dplyr::select(-WebFeature) %>% 
   left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_2" = "key")) %>% 
   mutate(Com_Useful_feature_of_website_2 = WebFeature) %>% 
-  select(-WebFeature) %>% 
+  dplyr::select(-WebFeature) %>% 
   left_join(UsefulWebFeatures, by = c("Com_Useful_feature_of_website_3" = "key")) %>% 
   mutate(Com_Useful_feature_of_website_3 = WebFeature) %>% 
-  select(-WebFeature) %>% 
+  dplyr::select(-WebFeature) %>% 
   mutate(Gender = ifelse(Gender == 0, NA, Gender - 1))
 ```
 
@@ -140,7 +140,7 @@ Encode missing data, responses that were originally at extreme ends of an ordina
 
 ```{r}
 missing_encoded <- SelectedData %>% 
-  select(-starts_with("Com_"),-Usefulness_of_website) %>% 
+  dplyr::select(-starts_with("Com_"),-Usefulness_of_website) %>% 
 #  mutate_at( vars(ends_with("0_6")),~as.factor(.)) %>% 
   mutate_at( vars(ends_with("0_6")),~car::recode(.,"6= NA;0= NA")) %>%
   mutate_at( vars(ends_with("Age")),~car::recode(.,"8= NA;0= NA")) #recoded 8 to be NA
@@ -154,7 +154,7 @@ missing_encoded <- SelectedData %>%
 Created subset with customer satisfaction and comments
 
 ```{r}
-q3 <- SFOdata %>% select(RESPNUM,Q7_text_All)
+q3 <- SFOdata %>% dplyr::select(RESPNUM,Q7_text_All)
 ```
 
 ## Question 1
@@ -170,7 +170,7 @@ We will first try to understand the composition of airport ratings by each demog
 ```{r}
 #select the demographics of interest
 q1 <- missing_encoded %>% 
-  select(Age, 
+  dplyr::select(Age, 
          Income_code, 
          Gender, 
          CFO_Airport_as_a_whole_0_6)%>% 
@@ -362,7 +362,7 @@ Created subset with overall customer satisfaction and satisfaction of the other 
 
 ```{r}
 q2 <- missing_encoded %>% 
-  select(Artwork_and_exihibits_0_6,
+  dplyr::select(Artwork_and_exihibits_0_6,
          Restaurants_0_6,
          Retail_shops_0_6,
          Signs_and_directions_inside_SFO_0_6,
@@ -422,9 +422,11 @@ The last factor relates to artwork, restaurants, and retail. This could be assoc
 
 ## Question 3
 
-Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. The executives are not quite sure how to examine it without going through individual surveys one by one, but they want you to see if there are any concepts or insights that arise from these responses. Do the free responses relate to the findings in a) or b) at all?
+Free-response comments, either positive or negative, were collected in addition to the 14-item quantitative survey. We can leverage these open ended responses to mine for sentiment within each response, and for overall topics that may or may not have been included in the survey structure. 
 
-We will develop a sentiment analysis model to determines the overall sentiment of a document by comparing positive and negative words. Since the comments are text based fields, we can look at the specific model of the comments to determine the overall sentiment. 
+We will first develop a sentiment analysis model to determines the overall sentiment of SFO guests by comparing positive and negative words. Since the comments are text based fields, we can look at the specific model of the comments to determine the overall sentiment. 
+
+We will then perform a topic analysis to see which specific topics were mentioned by the customers of the airport.
 
 
 ```{r,echo=FALSE, message= FALSE}
@@ -438,21 +440,22 @@ library(tm)
 ```
 
 We see that there are more negative comments that positive comments in our sentiment model.
-```{r}
+```{r, message = F}
 comments <- q3 %>% 
   unnest_tokens(word, Q7_text_All)
-comments  %>%
-    inner_join(get_sentiments("nrc")) %>%
-    count(sentiment, sort = TRUE)
+# comments  %>%
+#     inner_join(get_sentiments("nrc")) %>%
+#     count(sentiment, sort = TRUE)
 comments %>%
       inner_join(get_sentiments("bing")) %>%
       count(sentiment, sort = TRUE)
 ```
+Overall this is not a good result. Depending on how these responses are collected there may be a bias for dissatisfied customers to respond to the survery. We also do no have a baseline for whether airports in general perform very poorly in these sort of surveys, and this is actually a relatively good result, or vice-versa. Regardeless, the sentiment here is overall quite negative. 
 
 
 ### Topic Model
 
-For more specific analysis, we will develop a topic model. Topics models define the topics within a document. Combining all the comments regarding customers' overall satisfaction, our analysis determines the topics.
+For more specific analysis, we will develop a topic model. Topics models define the topics within each response, also referred to as a document. Combining all the comments regarding customers' overall satisfaction, our analysis determines the topics.
 
 ```{r}
 set.seed(1842)
@@ -518,14 +521,12 @@ Most of these topics focus on negative aspects of the airport, with the most fre
 
 # Part B
 
-Do particular groups of passengers have more trouble with signage (one of the most commented issue areas) than others? i.e can accessibility be improved by identifying and targeting improvements for at risk groups. Possible variables to investigate: "Age", "Gender", "Income_code", "Destination_Geo_Loc"
+The question we tackle in this section is 'Do particular groups of passengers have more trouble with signage (one of the most commented issue areas) than others?' i.e can accessibility be improved by identifying and targeting improvements for at risk groups. Possible variables to investigate: "Age", "Gender", "Income_code", "Destination_Geo_Loc"
 
--- Add responses w/ relevant security issue topics from q3 or satisfaction scores 
-
-```{r}
-
+```{r, evaluate = F, echo=F}
+#-- Add responses w/ relevant security issue topics from q3 or satisfaction scores 
 part_b <-  missing_encoded %>% 
-  select(Age, 
+  dplyr::select(Age, 
          Gender,
          Income_code, 
          Destination_Geo_Loc, # destination US region or foreign continent 
@@ -539,7 +540,7 @@ levels(part_b$Destination_Geo_Loc) <- c('US-West', 'US-East', 'US-Mid', 'CA/MX',
 
 ```
 
-```{r}
+```{r, evaluate = F, echo=F}
 ## TODO:
 ## [] Give Satisfaction gradient scale
 ## [] Fix proportion to equal 100%
@@ -564,13 +565,13 @@ ggplot(data = part_b_geo_prop, aes(x= as.factor(Signs_and_directions_inside_SFO_
   
 ```
 
-LCA is used with discrete data, such as survey responses since it only works with categorical data. Since the dataset is not made up of one homogenous group, it is better modeled by multiple groups that are characterized by unique response propensities. We then recevie profiles for the different groups.
+LCA is used with discrete data, such as survey responses since it only works with categorical data. Since the dataset is not made up of one homogenous group, it is better modeled by multiple groups that are characterized by unique response propensities. We then review profiles for the different groups.
 
 
 ```{r}
 #Create the responses as factors
 part_b <-  missing_encoded %>% 
-  select(Age, 
+  dplyr::select(Age, 
          Gender,
          Income_code, 
          Destination_Geo_Loc, # destination US region or foreign continent 
@@ -578,41 +579,68 @@ part_b <-  missing_encoded %>%
          Signs_and_directsion_on_roadways_0_6) %>% 
   mutate(Destination_Geo_Loc = as.factor(Destination_Geo_Loc))
 part_b$Age <- sapply(part_b$Age, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5,6,7)))))
-part_b$Gender <- sapply(part_b$Gender, function(x) (as.numeric(factor(x,levels = c(1,2)))))
+part_b$Gender <- sapply(part_b$Gender, function(x) (as.numeric(factor(x,levels = c(0,1)))))
 part_b$Income_code <- sapply(part_b$Income_code, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5)))))
 part_b$Signs_and_directions_inside_SFO_0_6 <- sapply(part_b$Signs_and_directions_inside_SFO_0_6, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5)))))
 part_b$Signs_and_directsion_on_roadways_0_6 <- sapply(part_b$Signs_and_directsion_on_roadways_0_6, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5)))))
 part_b$Destination_Geo_Loc <- sapply(part_b$Destination_Geo_Loc, function(x) (as.numeric(factor(x,levels = c(1,2,3,4,5,6,7,8,9,10)))))
+
+part_b <- part_b %>% 
+  rename(`Signs Inside` = `Signs_and_directions_inside_SFO_0_6`,
+         `Signs Outside` = `Signs_and_directsion_on_roadways_0_6`)
 ```
 We create different models with different  number of classes. We then determine which model is the best to use.
 ```{r,echo=FALSE, message= FALSE}
 library(poLCA)
 ```
-```{r}
+```{r, message = F, echo=F, results=F}
 lcaFormula <-  cbind(Age, 
          Gender,
          Income_code, 
          Destination_Geo_Loc, 
-         Signs_and_directions_inside_SFO_0_6, 
-         Signs_and_directsion_on_roadways_0_6) ~ 1
-lcaMod2 <-  poLCA(lcaFormula,part_b, nclass = 2, maxiter = 5000)
-lcaMod3 <-  poLCA(lcaFormula,part_b, nclass = 3, maxiter = 5000)
-lcaMod4 <-  poLCA(lcaFormula,part_b, nclass = 4, maxiter = 5000)
-lcaMod5 <-  poLCA(lcaFormula,part_b, nclass = 5, maxiter = 5000)
-lcaMod6 <-  poLCA(lcaFormula,part_b, nclass = 6, maxiter = 5000)
+         `Signs Inside`, 
+         `Signs Outside`) ~ 1
+set.seed(1969) #we landed on the moon, baby!
+lcaMod2 <-  poLCA(lcaFormula,part_b, nclass = 2, maxiter = 5000, verbose = F)
+lcaMod3 <-  poLCA(lcaFormula,part_b, nclass = 3, maxiter = 5000, verbose = F)
+lcaMod4 <-  poLCA(lcaFormula,part_b, nclass = 4, maxiter = 5000, verbose = F)
+lcaMod5 <-  poLCA(lcaFormula,part_b, nclass = 5, maxiter = 5000, verbose = F)
+lcaMod6 <-  poLCA(lcaFormula,part_b, nclass = 6, maxiter = 5000, verbose = F)
+lcaMod7 <-  poLCA(lcaFormula,part_b, nclass = 7, maxiter = 5000, verbose = F)
+lcaMod8 <-  poLCA(lcaFormula,part_b, nclass = 8, maxiter = 5000, verbose = F)
 ```
-To determine which is the best model, we compare AIC for statistical criterion. We see that class 3 has the lowest AIC and so is the best model to use.
+To determine which is the best model, we compare AIC for statistical criterion. 
 ```{r}
 rbind(class2 = lcaMod2$aic,
-  class3 = lcaMod3$aic, 
+      class3 = lcaMod3$aic, 
       class4 = lcaMod4$aic, 
       class5 = lcaMod5$aic,
-  class6 = lcaMod6$aic)
+      class6 = lcaMod6$aic,
+      class7 = lcaMod7$aic,
+      class8 = lcaMod8$aic)
 ```
+```{r}
+class_aic <- c(lcaMod2$aic,
+  lcaMod3$aic,
+  lcaMod4$aic,
+  lcaMod5$aic,
+  lcaMod6$aic,
+  lcaMod7$aic,
+  lcaMod8$aic
+  ) %>% 
+  cbind(2:8) %>% 
+  as_tibble()
+
+
+ggplot(data = class_aic,aes(y = ., x= V2))+
+  geom_line()+
+  labs(x = 'Number of Classes', y = 'AIC')
+```
+The AIC drops until there are seven classes. This suggests that the best model for explaining the variability between responses is to include 7 classes in the latent class model. There are 7 distinct types of customers differentiated by Age, Gender, Income, Destination and their ability to find signs and directions. 
 
 The plot below visualizes the three different profiles from the customers.
-```{r}
-plot(lcaMod3)
+```{r, fig.height=10, fig.width=10}
+plot(lcaMod7)
 ```
 The three classes of customers are the following build out three distinct profiles from the customers in relation to signage:
 Class 1: Around the age of 35-44, with a salary between $50k-$150k, travelings within the United States, finds the signs and directions in SFO are very good, and the signage on SFO roadways as satisfactory.
