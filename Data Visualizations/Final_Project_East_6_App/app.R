@@ -8,6 +8,7 @@ library(shiny)
 library(leaflet)
 library(dplyr)
 library(sf)
+library(tidyverse)
 
 # loads in all data and builds summary tables 
 source('./read_data.R')
@@ -150,7 +151,8 @@ server <- function(input, output, session) {
     output$ammenities <- renderPrint("All sorts of public interest graphs")
     output$business <- renderPlot(bus_summary %>% 
                                      as_tibble() %>% 
-                                     filter(Council_Me == input$district) %>% 
+                                      {if (input$district == 'All') as_tibble(bus_summary) else filter(as_tibble(bus_summary),Council_Me == input$district)}
+                                  %>% 
                                      mutate(`Business Type` = factor(business_type, ordered = TRUE, 
                                                                   levels = c('Food',
                                                                              'Retail',
@@ -167,7 +169,7 @@ server <- function(input, output, session) {
     )
     output$facilities <- renderPlot(public_facilities_summary %>% 
                                       as_tibble() %>% 
-                                      filter(Council_Me == input$district) %>% 
+                                        {if (input$district == 'All') as_tibble(public_facilities_summary) else filter(as_tibble(public_facilities_summary),Council_Me == input$district)} %>% 
                                       mutate(`Facilties Type` = POPL_TYPE,
                                              `Facilities Count` = n) %>%
                                       ggplot(aes(x=`Facilties Type`, y=`Facilities Count`)) +
@@ -175,7 +177,7 @@ server <- function(input, output, session) {
                                       scale_color_brewer(palette = "PuOr") + ggtitle("Number of Public Facilities by Facility Type") )
     output$parks <- renderPlot(parks_summary %>% 
                                       as_tibble() %>% 
-                                      filter(Council_Me == input$district) %>% 
+                                   {if (input$district == 'All') as_tibble(parks_summary) else filter(as_tibble(parks_summary),Council_Me == input$district)} %>% 
                                       mutate(`Parks Type` = Park_Type,
                                              `Parks Count` = n) %>%
                                       ggplot(aes(x=`Parks Type`, y=`Parks Count`)) +
@@ -183,7 +185,7 @@ server <- function(input, output, session) {
                                       scale_color_brewer(palette = "PuOr") + ggtitle("Number of Parks by Park Type") )
     output$schools <- renderPlot(school_summary %>% 
                                       as_tibble() %>% 
-                                      filter(Council_Me == input$district) %>% 
+                                     {if (input$district == 'All') as_tibble(school_summary) else filter(as_tibble(school_summary),Council_Me == input$district)} %>% 
                                       mutate(`School Type` = SchoolType,
                                              `School Count` = n) %>%
                                       ggplot(aes(x=`School Type`, y=`School Count`)) +
