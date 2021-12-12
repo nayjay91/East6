@@ -27,6 +27,8 @@ library(magrittr)
 library(readr)
 ```
 
+Read in the data.
+
 ```{r, echo=FALSE}
 
 SFOdata <-read.table("SFO_survey_withText.txt", header = TRUE, sep = "", quote = "\"", dec = ".", fill = TRUE, comment.char = "",strip.white=TRUE,stringsAsFactors = default.stringsAsFactors())
@@ -34,6 +36,8 @@ SFOdata <-read.table("SFO_survey_withText.txt", header = TRUE, sep = "", quote =
 UsefulWebFeatures <- read.csv("UsefulWebFeatures.csv")
 CommentForImprovement <- read.csv("Comment_For_Improvement.csv")
 ```
+
+Re-name variable of interest, remove variables that are not of interest, and re-code text variable to actual coded responses. 
 
 ```{r}
 oldnames = c("Q6A",
@@ -132,7 +136,7 @@ SelectedData <- SFOdata %>%
   mutate(Gender = ifelse(Gender == 0, NA, Gender - 1))
 ```
 
-Encode missing data
+Encode missing data, responses that were originally at extreme ends of an ordinal scale were actually non applicable, or non-response, so re-coding those variable with explicit NA makes the resulting data more manageable. 
 
 ```{r}
 missing_encoded <- SelectedData %>% 
@@ -143,15 +147,7 @@ missing_encoded <- SelectedData %>%
 ```
 
 
-Created a subset of data with the overall customer satisfaction scores and the demographic variables.
 
-```{r}
-q1 <- missing_encoded %>% 
-  select(Age, 
-         Income_code, 
-         Gender, 
-         CFO_Airport_as_a_whole_0_6)
-```
 
 Created subset with overall customer satisfaction and satisfaction of the other airport aspects.
 
@@ -185,25 +181,35 @@ Customers were asked to rate their opinion of the "SFO Airport as a whole" on a 
 
 We can see how the individual demographics (age, income, gender) relate to the overall satisfaction through plotting the individual demographics. To determine if there are patterns across the level of satisfaction based on demographic characteristics, we can use clustering for our analysis so that we can see how the different customers are grouped. 
 
-Clustering allows us to combine the different demographics and then group similar objects together. Cluster models assign observations based on the distance of a central point (such as the mean). Since our data has variables that contain a mean (since the responses are based on a scale of 1-5), we can use the mean as the center of our cluster. We can use this unsupervised machine learning method to identify the observations to find the different categories of the SFO customers.
+Clustering allows us to combine the different demographics and then group similar objects together. Cluster models assign observations based on the distance of a central point (such as the mean). Since we can calculate the mean of our variable (the responces are non-categorical 1-5 rating), we can use the mean as the representative average of our cluster. We can use this unsupervised machine learning method to classify the observations to find the different categories of the SFO customers.
 
-
-First, we understand the trends of each individual demographic.
-
-1. Age: From the histogram, the age group 25-34 filled out the most survey. Ratings of 4 were the most prevalent across all age groups.
+We will first try to understand the composition of airport ratings by each demographic dimension. 
 
 ```{r}
-q1_rev <- q1 %>% 
-  mutate(Age = as.factor(Age))
-
-# Give names to Age
-levels(q1_rev$Age) <- c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older")
+#select the demographics of interest
+q1 <- missing_encoded %>% 
+  select(Age, 
+         Income_code, 
+         Gender, 
+         CFO_Airport_as_a_whole_0_6)%>% 
+  mutate(Age = as.factor(Age),
+         Income_code = as.factor(Income_code),
+         Gender = as.factor(Gender))
 ```
+
+### 1. Age: 
+From the histogram, the age group 25-34 filled out the most survey. Ratings of 4 were the most prevalent across all age groups.
+
+Created a subset of data with the overall customer satisfaction scores and the demographic variables. 
+
 ```{r}
-q1_prop <- q1_rev %>% 
+# Give names to Age
+levels(q1$Age) <- c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older")
+
+q1_prop <- q1 %>% 
   group_by(Age) %>% 
   summarise(n_age = n()) %>% 
-  left_join(q1_rev %>% 
+  left_join(q1 %>% 
               group_by(Age, CFO_Airport_as_a_whole_0_6) %>% 
               summarise(n_sd_inside_sat = n())) %>% 
   mutate(age_prop = (n_sd_inside_sat / n_age) * 100)
@@ -232,19 +238,17 @@ ggplot(data = q1,aes(x=as.factor(Age), y = ..count../sum(..count..), fill = as.f
 ```
 
 
-2. Gender: From the histogram, more males completed the surveys than females. Both rated the airport as 4 the most.
-```{r}
-q1_rev <- q1_rev %>% 
-  mutate(Gender = as.factor(Gender))
+### 2. Gender: 
+From the histogram, more males completed the surveys than females. Both rated the airport as 4 the most.
 
-# Give names to Gender
-levels(q1_rev$Gender) <- c("Male","Female")
-```
 ```{r}
-q1_prop <- q1_rev %>% 
+# Give names to Gender
+levels(q1$Gender) <- c("Male","Female")
+
+q1_prop <- q1 %>% 
   group_by(Gender) %>% 
   summarise(n_gender = n()) %>% 
-  left_join(q1_rev %>% 
+  left_join(q1 %>% 
               group_by(Gender, CFO_Airport_as_a_whole_0_6) %>% 
               summarise(n_sd_inside_sat = n())) %>% 
   mutate(gender_prop = (n_sd_inside_sat / n_gender) * 100)
@@ -263,20 +267,17 @@ ggplot(data = q1,aes(x=as.factor(Gender), fill = as.factor(CFO_Airport_as_a_whol
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Gender") +ylab("Proportion")+scale_x_discrete(labels=c("Male","Female")) +ggtitle("Satisfaction by Gender")+ scale_fill_discrete(name = "Satisfaction")
 ```
 
-3. Income: From the histogram, those with an income of $50,000 to $100,000 had the highet response rate of the survey. Most of the income groups rated the airport as 4 the most.
+### 3. Income: 
+From the histogram, those with an income of $50,000 to $100,000 had the highet response rate of the survey. Most of the income groups rated the airport as 4 the most.
 
 ```{r}
-q1_rev <- q1_rev %>% 
-  mutate(Income_code = as.factor(Income_code))
-
 # Give names to Income
-levels(q1_rev$Income_code) <- c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")
-```
-```{r}
-q1_prop <- q1_rev %>% 
+levels(q1$Income_code) <- c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")
+
+q1_prop <- q1 %>% 
   group_by(Income_code) %>% 
   summarise(n_income = n()) %>% 
-  left_join(q1_rev %>% 
+  left_join(q1 %>% 
               group_by(Income_code, CFO_Airport_as_a_whole_0_6) %>% 
               summarise(n_sd_inside_sat = n())) %>% 
   mutate(income_prop = (n_sd_inside_sat / n_income) * 100)
@@ -313,7 +314,7 @@ q1 %>%
   fviz_nbclust(x = ., FUNcluster = kmeans, method = "gap")
 ```
 
-We used the kmeans test, where the different groups are formed by the closest observations to the mean of the cluster. This test does not respond well to outliers. However, since the data is based on 5 discrete responses, there will not be any outliers.
+We used the kmeans test, where the different groups are formed by the closest observations to the mean of the cluster. Though this test is sensitive to outliers, since the data is based on 5 discrete responses, the presence of strong outliers is unlikely.
 
 ```{r}
 kmeansTest <-  kmeans(x = scale(na.omit(q1)), centers = 4)
