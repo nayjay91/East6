@@ -149,25 +149,7 @@ missing_encoded <- SelectedData %>%
 
 
 
-Created subset with overall customer satisfaction and satisfaction of the other airport aspects.
 
-```{r}
-q2 <- missing_encoded %>% 
-  select(Artwork_and_exihibits_0_6,
-         Restaurants_0_6,
-         Retail_shops_0_6,
-         Signs_and_directions_inside_SFO_0_6,
-         Escalators_elevators_moving_walkways_0_6,
-         Information_on_screen_monitors_0_6,
-         Information_booths_lower_level_0_6,
-         Information_booths_upper_level_0_6,
-         Signs_and_directsion_on_roadways_0_6,
-         Airport_parking_facilities_0_6,
-         AirTrain_0_6,
-         Long_term_parking_lot_shuttle_0_6,
-         Airport_rental_car_center_0_6, 
-         CFO_Airport_as_a_whole_0_6)
-```
 
 Created subset with customer satisfaction and comments
 
@@ -364,15 +346,36 @@ Cluster 4: 45-54, Around 150k, male, satisfactory
 
 ## Question 2
 
-The executives also want to know if customer satisfaction can be broken down into different attributes of the airport. Knowing this will help the team target specific strengths or areas of improvement. The central feature the customer satisfaction survey is a 14-question portion of the survey asking customers to rate satisfaction with different aspects of the airport (see Question 6 in the data directory). The executives want you to perform a quantitative analysis to determine if there are broad themes that emerge from this part of the survey.
+The executives want to know if customer satisfaction can be broken down into different attributes of the airport.
 
-To determine how customers rated each individual aspect of the airport, we can plot the airport aspect with the customer satisfaction. To determine if there are any broad themes, we used factor analysis.
+To determine how customers rated each individual aspect of the airport, we can plot the airport aspect against the customer satisfaction. To determine if there are any broad themes, we used factor analysis.
 
-Factor analysis is when we explain the covariance or correlation among the variables. Factors represent some underlying construct of satisfaction. The factors are unobservable variables that can reduce the number of observed variables. 
+Factor analysis leverages covariance or correlation among the variables to detect larger, underlying variables with more meaning and weight than the originally measured variables. The factors we detect represent some underlying construct of satisfaction. These factors are unobservable variables but reduce the originally measured responses into a smaller, more actionable set of factors. 
+
 ```{r,echo=FALSE, message= FALSE}
 library(psych)
 library(lavaan)
 library(ggcorrplot)
+```
+
+Created subset with overall customer satisfaction and satisfaction of the other airport aspects.
+
+```{r}
+q2 <- missing_encoded %>% 
+  select(Artwork_and_exihibits_0_6,
+         Restaurants_0_6,
+         Retail_shops_0_6,
+         Signs_and_directions_inside_SFO_0_6,
+         Escalators_elevators_moving_walkways_0_6,
+         Information_on_screen_monitors_0_6,
+         Information_booths_lower_level_0_6,
+         Information_booths_upper_level_0_6,
+         Signs_and_directsion_on_roadways_0_6,
+         Airport_parking_facilities_0_6,
+         AirTrain_0_6,
+         Long_term_parking_lot_shuttle_0_6,
+         Airport_rental_car_center_0_6, 
+         CFO_Airport_as_a_whole_0_6)
 ```
 
 The customer satisfaction by each individual airport aspect can be seen as the following. We see that the highest ratings are 3s and 4s for most of the airport aspects. 
@@ -397,16 +400,14 @@ KMO(q2)
 
 We see that the p value from the barlett test is very small, so we reject the null hypothesis that the variables are not correlated. The overall MSA is greater that 0.6. Therefore, it makes sense to perform factor analysis to combine the variables.
 
-We determine the number of factors. There are three triangles between the red lines and so we select 3 factors.
+We determine the optimal number of factors that explain variation among all the variables, while reducing the number of dimensions. 
 ```{r}
 psych::fa.parallel(q2)
 ```
+This scree plot shows when additional factors no longer add additional explanatory value. The threshold is where the FA Actual Data line drops below the simulated or resampled data. In this case it is after 4 factors. However, the line is so close to the simulated line, that we leaned on parsimony and used three factors in our final analysis. 
 
-```{r}
-scree(q2)
-```
+We then fit the model with oblique rotation allowing for factors that contain some correlation. 
 
-We will use 3 factors moving forward.We then fit the model with oblique rotation since we want factrs that are correlated.
 ```{r}
 x3 <- fa(r = q2, nfactors = 3, rotate = "promax")
 x3$loadings
