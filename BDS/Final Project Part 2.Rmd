@@ -163,7 +163,8 @@ q1 <- missing_encoded %>%
   dplyr::select(Age, 
          Income_code, 
          Gender, 
-         CFO_Airport_as_a_whole_0_6)%>% 
+         CFO_Airport_as_a_whole_0_6)
+q1_factors <- q1 %>% 
   mutate(Age = as.factor(Age),
          Income_code = as.factor(Income_code),
          Gender = as.factor(Gender))
@@ -176,12 +177,12 @@ Created a subset of data with the overall customer satisfaction scores and the d
 
 ```{r}
 # Give names to Age
-levels(q1$Age) <- c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older")
+levels(q1_factors$Age) <- c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older")
 
-q1_prop <- q1 %>% 
+q1_prop <- q1_factors %>% 
   group_by(Age) %>% 
   summarise(n_age = n()) %>% 
-  left_join(q1 %>% 
+  left_join(q1_factors %>% 
               group_by(Age, CFO_Airport_as_a_whole_0_6) %>% 
               summarise(n_sd_inside_sat = n())) %>% 
   mutate(age_prop = (n_sd_inside_sat / n_age) * 100)
@@ -198,7 +199,7 @@ ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = age_pro
 
 
 ```{r}
-ggplot(data = q1,aes(x=as.factor(Age), y = ..count../sum(..count..), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+ggplot(data = q1_factors,aes(x=Age, y = ..count../sum(..count..), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar() +
   xlab("Age") + 
   scale_x_discrete(labels=c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older","Don't know/refused")) + 
@@ -216,17 +217,17 @@ From the histogram, more males completed the surveys than females. Both rated th
 # Give names to Gender
 levels(q1$Gender) <- c("Male","Female")
 
-q1_prop <- q1 %>% 
+q1_prop <- q1_factors %>% 
   group_by(Gender) %>% 
   summarise(n_gender = n()) %>% 
-  left_join(q1 %>% 
+  left_join(q1_factors %>% 
               group_by(Gender, CFO_Airport_as_a_whole_0_6) %>% 
               summarise(n_sd_inside_sat = n())) %>% 
   mutate(gender_prop = (n_sd_inside_sat / n_gender) * 100)
 
 
 
-ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = gender_prop, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+ggplot(data = q1_prop, aes(x= CFO_Airport_as_a_whole_0_6, y = gender_prop, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_col(position = 'dodge') +
   facet_wrap(Gender ~ .) +
   ylab("Proportion (%)") +
@@ -234,7 +235,7 @@ ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = gender_
   scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
 ```
 ```{r}
-ggplot(data = q1,aes(x=as.factor(Gender), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+ggplot(data = q1_factors,aes(x=Gender, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Gender") +ylab("Proportion")+scale_x_discrete(labels=c("Male","Female")) +ggtitle("Satisfaction by Gender")+ scale_fill_discrete(name = "Satisfaction")
 ```
 
@@ -243,19 +244,19 @@ From the histogram, those with an income of $50,000 to $100,000 had the highest 
 
 ```{r}
 # Give names to Income
-levels(q1$Income_code) <- c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")
+levels(q1_factors$Income_code) <- c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")
 
-q1_prop <- q1 %>% 
+q1_prop <- q1_factors %>% 
   group_by(Income_code) %>% 
   summarise(n_income = n()) %>% 
-  left_join(q1 %>% 
+  left_join(q1_factors %>% 
               group_by(Income_code, CFO_Airport_as_a_whole_0_6) %>% 
               summarise(n_sd_inside_sat = n())) %>% 
   mutate(income_prop = (n_sd_inside_sat / n_income) * 100)
 
 
 
-ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = income_prop, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+ggplot(data = q1_prop, aes(x= CFO_Airport_as_a_whole_0_6, y = income_prop, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_col(position = 'dodge') +
   facet_wrap(Income_code ~ .) +
   ylab("Proportion (%)") +
@@ -263,7 +264,7 @@ ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = income_
   scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
 ```
 ```{r}
-ggplot(data = q1,aes(x=as.factor(Income_code), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
+ggplot(data = q1_factors,aes(x=as.factor(Income_code), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar(aes(y = ..count../sum(..count..))) + xlab("Income") +ylab("Proportion")+scale_x_discrete(labels = c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")) +ggtitle("Satisfaction by Income")+ scale_fill_discrete(name = "Satisfaction")
 ```
 
