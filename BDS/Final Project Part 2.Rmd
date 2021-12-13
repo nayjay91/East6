@@ -215,7 +215,7 @@ From the histogram, more males completed the surveys than females. Both rated th
 
 ```{r}
 # Give names to Gender
-levels(q1$Gender) <- c("Male","Female")
+levels(q1_factors$Gender) <- c("Male","Female")
 
 q1_prop <- q1_factors %>% 
   group_by(Gender) %>% 
