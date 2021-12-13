@@ -35,3 +35,13 @@ public_facilities_summary <- public_facilities_sf %>%
   tibble() %>% 
   group_by(POPL_TYPE, Council_Me) %>% 
   summarise(n = n())
+
+
+
+### Create Population Density Palette 
+pop_pal <- colorBin(
+  palette = "Blues",
+  domain = filter(demographics_sf, Council_Me != "All")$pop_density,
+  bins = 6, pretty = TRUE)
+
+

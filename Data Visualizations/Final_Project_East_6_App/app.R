@@ -52,7 +52,7 @@ addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, position)
     
     # second layout option (highlight + ctrl shift C to uncomment)
     sidebarLayout(
-        sidebarPanel(
+        sidebarPanel(width = 200, 
             selectInput(inputId = "district",
                         "Council Disctrict:",
                         choices = c("Tim Scott",
@@ -71,12 +71,18 @@ addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, position)
                         tabPanel("Demographics", fluidPage(htmlOutput('density'),
                                                            plotOutput("renters"),
                                                            plotOutput("age"))),
-                        tabPanel("Commercial and Public Entities", verbatimTextOutput("ammenities"),
+                        tabPanel("Commercial and Public Entities",
                                  plotOutput("business"),
                                  plotOutput("facilities"),
                                  plotOutput("parks"),
                                  plotOutput("schools")),
-                        tabPanel("Map of South Bend", leafletOutput(outputId = "map"))
+                        
+                        tabPanel("Map of South Bend", 
+                                 radioButtons(inputId = "map_density", "Show Population Density", choices = c("Yes","No"), inline = TRUE), 
+                                 checkboxGroupInput(inputId = "map_bus_type", "Filter Business Types", inline = TRUE, 
+                                                    choices = c('Food','Retail','Service','Entertainment'), 
+                                                    selected = c('Food','Retail','Service','Entertainment')),
+                                 leafletOutput(outputId = "map", width = "100%", height = 800))
             )
         )
     )
@@ -147,8 +153,6 @@ server <- function(input, output, session) {
                                         round(),"</span></p>
                                                                 <p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Per Square Mile</span></p>"))
 
-    #output$density <- render
-    output$ammenities <- renderPrint("All sorts of public interest graphs")
     output$business <- renderPlot(bus_summary %>% 
                                      as_tibble() %>% 
                                       {if (input$district == 'All') as_tibble(bus_summary) else filter(as_tibble(bus_summary),Council_Me == input$district)}
@@ -191,39 +195,57 @@ server <- function(input, output, session) {
                                       ggplot(aes(x=`School Type`, y=`School Count`)) +
                                       geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
                                       scale_color_brewer(palette = "PuOr") + ggtitle("Number of Private and Public Schools") )
+    
+    
+    filtered_demographics_sf <- reactive({
+        if (input$district == 'All') filter(demographics_sf, Dist != 0)  else filter(demographics_sf, Council_Me == input$district)
+    })
+    
+    filtered_businesses <- reactive({
+        bus_in_district_sf %>% filter(business_type %in% input$map_bus_type)
+    })
+    
     output$map <- renderLeaflet({
-        ## TODO: 
-        ## [] Population density layer (& fix All polygons)
-        ## [] Fix colors... add symbols? 
-        ## [] Filter by types?? separate layer controls?
         
         leaflet(options = leafletOptions(minZoom = 11, maxZoom = 17)) %>%
             addTiles() %>% 
-            addPolygons(data = filter(demographics_sf, Council_Me == input$district), fill = 0) %>%
+            addPolygons(data = filtered_demographics_sf(), 
+                        fillColor = ~pop_pal(pop_density),
+                        fillOpacity = if (input$map_density == 'Yes') .7 else ~0) %>%
             ## Businesses
             addCircleMarkers(group = "Businesses", 
-                             data = if (input$district == 'All') bus_in_district_sf else filter(bus_in_district_sf, Council_Me == input$district), 
-                             color = "red", radius = 2, opacity = .5, popup = ~paste0("Name: ",Business_N, "<br>Type: ", business_type)) %>% 
+                             data = if (input$district == 'All') filtered_businesses() else filter(filtered_businesses(), Council_Me == input$district), 
+                             color = "#CC6677", radius = 2, opacity = .5, popup = ~paste0("Name: ",Business_N, "<br>Type: ", business_type)) %>% 
             ## Facilities
             addCircleMarkers(group = "Facilities", 
                              data = if (input$district == 'All') public_facilities_sf else filter(public_facilities_sf, Council_Me == input$district), 
-                             color = "black", radius = 2, opacity = .5, popup = ~paste0("Name: ",POPL_NAME, "<br>Type: ", POPL_TYPE)) %>% 
+                             color = "#332288", radius = 2, opacity = .5, popup = ~paste0("Name: ",POPL_NAME, "<br>Type: ", POPL_TYPE)) %>% 
             ## Parks
             addCircleMarkers(group = "Parks", 
                              data = if (input$district == 'All') parks_sf else filter(parks_sf, Council_Me == input$district), 
-                             color = "green", radius = 2, opacity = .5, popup = ~paste0("Name: ",Park_Name, "<br>Type: ", Park_Type)) %>% 
+                             color = "#117733", radius = 2, opacity = .5, popup = ~paste0("Name: ",Park_Name, "<br>Type: ", Park_Type)) %>% 
             ## Schools 
             addCircleMarkers(group = "Schools", 
                              data = if (input$district == 'All') school_boundaries_sf else filter(school_boundaries_sf, Council_Me == input$district), 
-                             color = "pink", radius = 2, opacity = .5, popup = ~paste0("Name: ",School, "<br>Type: ", SchoolType)) %>% 
+                             color = "#999933", radius = 2, opacity = .5, popup = ~paste0("Name: ",School, "<br>Type: ", SchoolType)) %>% 
             
             addLayersControl(overlayGroups = c("Businesses", 'Facilities', "Parks", 'Schools'), 
                              options = layersControlOptions(collapsed = FALSE)) %>% 
-            addLegendCustom(colors = c("red", "black", "green", "pink"), 
+            addLegendCustom(colors = c("#CC6677", "#332288", "#117733", "#999933"), 
                             labels = c("Businesses", "Facilities", "Parks", "Schools"), 
                             sizes = c(10, 10, 10, 10), position = "bottomright")
-            
+        
         })
+    
+    observe({
+        proxy <- leafletProxy("map", data = filtered_demographics_sf())
+        
+        proxy %>% clearGroup('dens_legend')
+        if (input$map_density == 'Yes') {
+            proxy %>% addLegend(group = 'dens_legend', position = 'bottomleft', title = "Pop Per Sq. Meter",
+                                pal = pop_pal, values = c('1000', '1500', '2000', '2500', '3000', '3500', '4000', '4500')) 
+        }
+    })
 }
 
 # Run the application 
