@@ -147,23 +147,13 @@ missing_encoded <- SelectedData %>%
 ```
 
 
-
-
-
-
-Created subset with customer satisfaction and comments
-
-```{r}
-q3 <- SFOdata %>% dplyr::select(RESPNUM,Q7_text_All)
-```
-
 ## Question 1
 
 Customers were asked to rate their opinion of the "SFO Airport as a whole" on a scale from 1 ("unacceptable") to 5 ("outstanding"). The executives want to know if there are patterns across the satisfied or dissatisfied customers based on demographic characteristics, such as sex, age group, and income level.
 
 We can see how the individual demographics (age, income, gender) relate to the overall satisfaction through plotting the individual demographics. To determine if there are patterns across the level of satisfaction based on demographic characteristics, we can use clustering for our analysis so that we can see how the different customers are grouped. 
 
-Clustering allows us to combine the different demographics and then group similar objects together. Cluster models assign observations based on the distance of a central point (such as the mean). Since we can calculate the mean of our variable (the responces are non-categorical 1-5 rating), we can use the mean as the representative average of our cluster. We can use this unsupervised machine learning method to classify the observations to find the different categories of the SFO customers.
+Clustering allows us to combine the different demographics and then group similar objects together. Cluster models assign observations based on the distance of a central point (such as the mean). Since we can calculate the mean of our variable (the responses are non-categorical 1-5 rating), we can use the mean as the representative average of our cluster. We can use this unsupervised machine learning method to classify the observations to find the different categories of the SFO customers.
 
 We will first try to understand the composition of airport ratings by each demographic dimension. 
 
@@ -208,7 +198,6 @@ ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = age_pro
 
 
 ```{r}
-#Can delete this if other plot works
 ggplot(data = q1,aes(x=as.factor(Age), y = ..count../sum(..count..), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
   geom_bar() +
   xlab("Age") + 
@@ -250,7 +239,7 @@ ggplot(data = q1,aes(x=as.factor(Gender), fill = as.factor(CFO_Airport_as_a_whol
 ```
 
 ### 3. Income: 
-From the histogram, those with an income of $50,000 to $100,000 had the highet response rate of the survey. Most of the income groups rated the airport as 4 the most.
+From the histogram, those with an income of $50,000 to $100,000 had the highest response rate of the survey. Most of the income groups rated the airport as 4 the most.
 
 ```{r}
 # Give names to Income
@@ -439,6 +428,11 @@ library(stm)
 library(tm)
 ```
 
+Created subset with customer satisfaction and comments
+```{r}
+q3 <- SFOdata %>% dplyr::select(RESPNUM,Q7_text_All)
+```
+
 We see that there are more negative comments that positive comments in our sentiment model.
 ```{r, message = F}
 comments <- q3 %>% 
@@ -450,7 +444,7 @@ comments %>%
       inner_join(get_sentiments("bing")) %>%
       count(sentiment, sort = TRUE)
 ```
-Overall this is not a good result. Depending on how these responses are collected there may be a bias for dissatisfied customers to respond to the survery. We also do no have a baseline for whether airports in general perform very poorly in these sort of surveys, and this is actually a relatively good result, or vice-versa. Regardeless, the sentiment here is overall quite negative. 
+Overall this is not a good result. Depending on how these responses are collected there may be a bias for dissatisfied customers to respond to the survey. We also do no have a baseline for whether airports in general perform very poorly in these sort of surveys, and this is actually a relatively good result, or vice-versa. Regardless, the sentiment here is overall quite negative. 
 
 
 ### Topic Model
@@ -638,14 +632,18 @@ ggplot(data = class_aic,aes(y = ., x= V2))+
 ```
 The AIC drops until there are seven classes. This suggests that the best model for explaining the variability between responses is to include 7 classes in the latent class model. There are 7 distinct types of customers differentiated by Age, Gender, Income, Destination and their ability to find signs and directions. 
 
-The plot below visualizes the three different profiles from the customers.
+The plot below visualizes the seven different profiles from the customers.
 ```{r, fig.height=10, fig.width=10}
 plot(lcaMod7)
 ```
-The three classes of customers are the following build out three distinct profiles from the customers in relation to signage:
-Class 1: Around the age of 35-44, with a salary between $50k-$150k, travelings within the United States, finds the signs and directions in SFO are very good, and the signage on SFO roadways as satisfactory.
-Class 2: Young adults (age 18-34) with a a lower salary (under $50k) traveling within the United States find the signs and directions in SFO as very good with the signage of SFO roadways as satisfactory.
-Class 3: Adults older than 45 with a salary between $50k-$100k traveling within the United States, find the signs and directions in SFO as excellent while the signage on SFO roadways are very positive. 
+The seven classes of customers are the following build out three distinct profiles from the customers in relation to signage:
+Class 1: Around the age of 35-44, with a salary between $50k-$150k, travelings within the United States, finds the signs and directions in SFO are very good, and the signage on SFO roadways as very good.
+Class 2: Adults of all ages and incomes traveling within the United States find the signs and directions in SFO as very good with the signage of SFO roadways as very good.
+Class 3:Middle age adults with a mid salary traveling within the United States find the signs and directions in SFO as satisfactory with the signage of SFO roadways as satisfactory.
+Class 4: Middle age adults with a lower to mid salary traveling within the United States find the signs and directions in SFO as fair/satisfactory with the signage of SFO roadways as fair/satisfactory.
+Class 5: Middle aged male adults with lower salary traveling internationally find the signs and directions in SFO as very good with the signage of SFO roadways as very positive.
+Class 6: Middle to older male adults with higher salary traveling within the United States find the signs and directions in SFO as very good with the signage of SFO roadways as very positive.
+Class 7: Young adults (age 18-34) with a a lower salary (under $50k) traveling within the United States find the signs and directions in SFO as very good with the signage of SFO roadways as satisfactory.
 
 
 
