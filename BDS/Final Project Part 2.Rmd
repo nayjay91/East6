@@ -194,20 +194,12 @@ ggplot(data = q1_prop, aes(x= as.factor(CFO_Airport_as_a_whole_0_6), y = age_pro
   facet_wrap(Age ~ .) +
   ylab("Proportion (%)") +
   xlab("Satisfaction") + 
-  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
+  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray") +
+  ggtitle("Overall Satisfaction and Age")
+  
 ```
 
-
-```{r}
-ggplot(data = q1_factors,aes(x=Age, y = ..count../sum(..count..), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
-  geom_bar() +
-  xlab("Age") + 
-  scale_x_discrete(labels=c("Under 18","18-24","25-34","35-44","45-54","55-64","65 and older","Don't know/refused")) + 
-  ylab("Proportion") + 
-  ggtitle("Satisfaction by Age") + 
-  scale_fill_discrete(name = "Satisfaction") + 
-  theme(axis.text.x = element_text(angle=45))
-```
+From the chart, we can see that younger respondants more frequently give positive ratings, while as age increases there are proportionally more negative reviews. 
 
 
 ### 2. Gender: 
@@ -232,12 +224,12 @@ ggplot(data = q1_prop, aes(x= CFO_Airport_as_a_whole_0_6, y = gender_prop, fill 
   facet_wrap(Gender ~ .) +
   ylab("Proportion (%)") +
   xlab("Satisfaction") + 
-  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
+  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray") +
+  ggtitle("Overall Satisfaction and Gender")
 ```
-```{r}
-ggplot(data = q1_factors,aes(x=Gender, fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
-  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Gender") +ylab("Proportion")+scale_x_discrete(labels=c("Male","Female")) +ggtitle("Satisfaction by Gender")+ scale_fill_discrete(name = "Satisfaction")
-```
+
+While a rating of 4 is most frequent across all genders, males appear to be more likley than females to give lower satisfaction scores. 
+
 
 ### 3. Income: 
 From the histogram, those with an income of $50,000 to $100,000 had the highest response rate of the survey. Most of the income groups rated the airport as 4 the most.
@@ -261,14 +253,15 @@ ggplot(data = q1_prop, aes(x= CFO_Airport_as_a_whole_0_6, y = income_prop, fill 
   facet_wrap(Income_code ~ .) +
   ylab("Proportion (%)") +
   xlab("Satisfaction") + 
-  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
-```
-```{r}
-ggplot(data = q1_factors,aes(x=as.factor(Income_code), fill = as.factor(CFO_Airport_as_a_whole_0_6))) +
-  geom_bar(aes(y = ..count../sum(..count..))) + xlab("Income") +ylab("Proportion")+scale_x_discrete(labels = c("Under $50k","$50k-$100k","$100k-$150k","Over 150k","Other")) +ggtitle("Satisfaction by Income")+ scale_fill_discrete(name = "Satisfaction")
+  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray") +
+  ggtitle("Overall Satisfaction and Income")
 ```
 
+It appears that proportionally, those with higher income may be slightly less likley to be highly satisfied. 
+
+
 Next, we identify any patterns across all demographics. 
+
 ```{r,echo=FALSE, message= FALSE}
 library(factoextra)
 library(cluster)
@@ -516,7 +509,9 @@ Most of these topics focus on negative aspects of the airport, with the most fre
 
 # Part B
 
-The question we tackle in this section is 'Do particular groups of passengers have more trouble with signage (one of the most commented issue areas) than others?' i.e can accessibility be improved by identifying and targeting improvements for at risk groups. Possible variables to investigate: "Age", "Gender", "Income_code", "Destination_Geo_Loc"
+The question we tackle in this section is 'Do particular groups of passengers have more trouble with signage (one of the most commented issue areas) than others?' i.e can accessibility be improved by identifying and targeting improvements for at risk groups. Possible variables to investigate: "Age", "Gender", "Income_code", "Destination_Geo_Loc".
+
+
 
 ```{r, evaluate = F, echo=F}
 #-- Add responses w/ relevant security issue topics from q3 or satisfaction scores 
@@ -536,10 +531,6 @@ levels(part_b$Destination_Geo_Loc) <- c('US-West', 'US-East', 'US-Mid', 'CA/MX',
 ```
 
 ```{r, evaluate = F, echo=F}
-## TODO:
-## [] Give Satisfaction gradient scale
-## [] Fix proportion to equal 100%
-## [] Name 
 
 part_b_geo_prop <- part_b %>% 
   group_by(Destination_Geo_Loc) %>% 
@@ -556,11 +547,15 @@ ggplot(data = part_b_geo_prop, aes(x= as.factor(Signs_and_directions_inside_SFO_
   facet_wrap(Destination_Geo_Loc ~ .) +
   ylab("Proportion (%)") +
   xlab("Satisfaction") + 
-  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray")
+  scale_fill_brewer(name = "Satisfaction", palette = 'Spectral', na.value = "gray") +
+  ggtitle("Signage and Direction Satisfaction and Destination")
   
 ```
 
-LCA is used with discrete data, such as survey responses since it only works with categorical data. Since the dataset is not made up of one homogenous group, it is better modeled by multiple groups that are characterized by unique response propensities. We then review profiles for the different groups.
+Using the location of the destination airport, we can see that responders flying inside the US have a high proportion of neutral to negative responses compared to other destinations. This may be a useful variable for targeting signage changes for passengers flying domestic.  
+
+
+LCA is used with discrete data, such as survey responses since it only works with categorical data. Since the dataset is not made up of one homogenous group, it is better modeled by multiple groups that are characterized by unique response propensities. We then review profiles for the different groups. We decided to use LCA because it does a good job of grouping responders together in insightful ways. This will hopefully allow us to determine how we can target specific groups which may need more help with signage than others. 
 
 
 ```{r}
@@ -637,7 +632,9 @@ The plot below visualizes the seven different profiles from the customers.
 ```{r, fig.height=10, fig.width=10}
 plot(lcaMod7)
 ```
+
 The seven classes of customers are the following build out three distinct profiles from the customers in relation to signage:
+
 Class 1: Around the age of 35-44, with a salary between $50k-$150k, travelings within the United States, finds the signs and directions in SFO are very good, and the signage on SFO roadways as very good.
 Class 2: Adults of all ages and incomes traveling within the United States find the signs and directions in SFO as very good with the signage of SFO roadways as very good.
 Class 3:Middle age adults with a mid salary traveling within the United States find the signs and directions in SFO as satisfactory with the signage of SFO roadways as satisfactory.
@@ -647,5 +644,6 @@ Class 6: Middle to older male adults with higher salary traveling within the Uni
 Class 7: Young adults (age 18-34) with a a lower salary (under $50k) traveling within the United States find the signs and directions in SFO as very good with the signage of SFO roadways as satisfactory.
 
 
+Based on our results, we found that responders from Class 4 (Middle age adults with a lower to mid salary traveling within the United States) have lower satisfaction with directions and signage, and therefore should be targeted for improvements. 
 
 
