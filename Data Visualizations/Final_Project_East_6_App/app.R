@@ -90,7 +90,7 @@ addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, position)
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-    
+    theme_update(plot.title = element_text(hjust = 0.5,size = 24))
     output$demographics <- renderPrint("Demographics graphs")
     output$age <- renderPlot(demographics_sf %>% 
                                  as_tibble() %>% 
@@ -142,7 +142,12 @@ server <- function(input, output, session) {
                                      geom_bar(width = 1, stat = "identity", color = "white") +
                                      geom_text(aes(y = lab.ypos, label = total), color = "white") +
                                      coord_polar("y", start=0) +
-                                     theme_void()  + ggtitle("Residences Owned vs. Rented")            
+                                     theme_void()  + ggtitle("Residences Owned vs. Rented") + theme(plot.title = element_text(size = 24))
+
+
+
+
+           
                                 )
     output$density <- renderText(paste("<p style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Population density is</span></p>
 <p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:120px;line-height:107%;color:#00BFC4;\">",
@@ -167,7 +172,7 @@ server <- function(input, output, session) {
                                                                              'Unclassified')),
                                             `Business Count` = n) %>%
                                       ggplot(aes(x=`Business Type`, y=`Business Count`)) +
-                                      geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                      geom_bar(width = 0.8,position = position_dodge(width=0.2),stat = 'identity', fill = '#00BFC4') + 
                                       scale_color_brewer(palette = "PuOr") + ggtitle("Number of Businesses by Business Type")
 
     )
@@ -177,7 +182,7 @@ server <- function(input, output, session) {
                                       mutate(`Facilties Type` = POPL_TYPE,
                                              `Facilities Count` = n) %>%
                                       ggplot(aes(x=`Facilties Type`, y=`Facilities Count`)) +
-                                      geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                      geom_bar(width = 0.8,position = position_dodge(width=0.2),stat = 'identity', fill = '#00BFC4') + 
                                       scale_color_brewer(palette = "PuOr") + ggtitle("Number of Public Facilities by Facility Type") )
     output$parks <- renderPlot(parks_summary %>% 
                                       as_tibble() %>% 
@@ -185,7 +190,7 @@ server <- function(input, output, session) {
                                       mutate(`Parks Type` = Park_Type,
                                              `Parks Count` = n) %>%
                                       ggplot(aes(x=`Parks Type`, y=`Parks Count`)) +
-                                      geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                      geom_bar(width = 0.8,position = position_dodge(width=0.2),stat = 'identity', fill = '#00BFC4') + 
                                       scale_color_brewer(palette = "PuOr") + ggtitle("Number of Parks by Park Type") )
     output$schools <- renderPlot(school_summary %>% 
                                       as_tibble() %>% 
@@ -193,7 +198,7 @@ server <- function(input, output, session) {
                                       mutate(`School Type` = SchoolType,
                                              `School Count` = n) %>%
                                       ggplot(aes(x=`School Type`, y=`School Count`)) +
-                                      geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
+                                      geom_bar(width = 0.8,position = position_dodge(width=0.2),stat = 'identity', fill = '#00BFC4') + 
                                       scale_color_brewer(palette = "PuOr") + ggtitle("Number of Private and Public Schools") )
     
     
