@@ -210,20 +210,12 @@ server <- function(input, output, session) {
                              options = layersControlOptions(collapsed = FALSE)) %>% 
             addLegendCustom(colors = c("#CC6677", "#332288", "#117733", "#999933"), 
                             labels = c("Businesses", "Facilities", "Parks", "Schools"), 
-                            sizes = c(10, 10, 10, 10), position = "bottomright")
+                            sizes = c(10, 10, 10, 10), position = "bottomright") %>% 
+            addLegend(group = 'dens_legend', position = 'bottomleft', title = "Pop Per Sq. Mile",
+                      pal = pop_pal, values = c('1000', '1500', '2000', '2500', '3000', '3500', '4000', '4500')) 
         
         })
     
-    ## Event triggers adding or removing population density legend when turned on/off
-    observe({
-        proxy <- leafletProxy("map", data = filtered_demographics_sf())
-        
-        proxy %>% clearGroup('dens_legend')
-        if (input$map_density == 'Yes') {
-            proxy %>% addLegend(group = 'dens_legend', position = 'bottomleft', title = "Pop Per Sq. Mile",
-                                pal = pop_pal, values = c('1000', '1500', '2000', '2500', '3000', '3500', '4000', '4500')) 
-        }
-    })
 }
 
 # Run the application 
