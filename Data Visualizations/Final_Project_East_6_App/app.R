@@ -14,63 +14,23 @@ library(tidyverse)
 source('./read_data.R')
 
 
-## Function for custom legends 
-addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, position){
-    colorAdditions <- paste0(colors, "; border-radius: 50%; width:", sizes, "px; height:", sizes, "px")
-    labelAdditions <- paste0("<div style='display: inline-block;height: ", 
-                             sizes, "px;margin-top: 4px;line-height: ", sizes, "px;'>", 
-                             labels, "</div>")
-    
-    return(addLegend(map, colors = colorAdditions, 
-                     labels = labelAdditions, opacity = opacity, position = position))
-}
-
-
-
  ui <- fluidPage(
-# 
-#     # Application title
-#     titlePanel("Moving South Bend Forward"),
-# 
-#     
-#     headerPanel(
-#             selectInput(inputId = "district",
-#                         "Council Disctrict:",
-#                         choices = demographics_sf$Council_Me,
-#                         selected = "All"
-#             )
-#         ),
-#     mainPanel(
-#         tabsetPanel(type = "tabs",
-#                     tabPanel("demographics", fluidPage(plotOutput("renters"),
-#                                                        plotOutput("age"),
-#                                                        htmlOutput('test'))),
-#                     tabPanel("schools and businesses", verbatimTextOutput("ammenities")),
-#                     tabPanel("Map", leafletOutput(outputId = "map"))
-#         )
-#     )
-    
-    # second layout option (highlight + ctrl shift C to uncomment)
+
     sidebarLayout(
         sidebarPanel(width = 200, 
             selectInput(inputId = "district",
                         "Council Disctrict:",
-                        choices = c("Tim Scott",
-                                    "Regina Williams",
-                                    "Sharon McBride",
-                                    "Jo M. Broden",
-                                    "Dr. David Varner",
-                                    "Oliver Davis",
-                                    "All"
-                        ),#this may be fine, but for programming would not want to hard code
+                        choices = demographics_sf$Council_Me,
                         selected = "All"
                         )
         ),
         mainPanel(
             tabsetPanel(type = "tabs",
+                        
                         tabPanel("Demographics", fluidPage(htmlOutput('density'),
                                                            plotOutput("renters"),
                                                            plotOutput("age"))),
+                        
                         tabPanel("Commercial and Public Entities",
                                  plotOutput("business"),
                                  plotOutput("facilities"),
@@ -90,8 +50,13 @@ addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, position)
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
+   
+     # Use this theme for all plots 
     theme_update(plot.title = element_text(hjust = 0.5,size = 24))
+
+    ### Demographics Tab - Nathan
     output$demographics <- renderPrint("Demographics graphs")
+    
     output$age <- renderPlot(demographics_sf %>% 
                                  as_tibble() %>% 
                                  filter(Council_Me == input$district) %>% 
@@ -127,6 +92,7 @@ server <- function(input, output, session) {
                                  geom_bar(width = 1,stat = 'identity', fill = '#00BFC4', color = 'white') + 
                                  scale_color_brewer(palette = "PuOr") + ggtitle("Distribution of South Bend Residents' Ages") 
                              )
+    
     output$renters <- renderPlot(demographics_sf %>% 
                                      as_tibble() %>% 
                                      filter(Council_Me == input$district) %>% 
@@ -143,12 +109,8 @@ server <- function(input, output, session) {
                                      geom_text(aes(y = lab.ypos, label = total), color = "white") +
                                      coord_polar("y", start=0) +
                                      theme_void()  + ggtitle("Residences Owned vs. Rented") + theme(plot.title = element_text(size = 24))
-
-
-
-
-           
                                 )
+    
     output$density <- renderText(paste("<p style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Population density is</span></p>
 <p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:120px;line-height:107%;color:#00BFC4;\">",
                                     demographics_sf %>%
@@ -158,6 +120,8 @@ server <- function(input, output, session) {
                                         round(),"</span></p>
                                                                 <p id=\"isPasted\" style='margin-top:0in;margin-right:0in;margin-bottom:8.0pt;margin-left:0in;line-height:107%;font-size:15px;font-family:\"Calibri\",sans-serif;'><span style=\"font-size:37px;line-height:107%;\">Per Square Mile</span></p>"))
 
+    
+    ### Commercial and Public Entities Tab - Shannon
     output$business <- renderPlot(bus_summary %>% 
                                      as_tibble() %>% 
                                       {if (input$district == 'All') as_tibble(bus_summary) else filter(as_tibble(bus_summary),Council_Me == input$district)}
@@ -176,6 +140,7 @@ server <- function(input, output, session) {
                                       scale_color_brewer(palette = "PuOr") + ggtitle("Number of Businesses by Business Type")
 
     )
+    
     output$facilities <- renderPlot(public_facilities_summary %>% 
                                       as_tibble() %>% 
                                         {if (input$district == 'All') as_tibble(public_facilities_summary) else filter(as_tibble(public_facilities_summary),Council_Me == input$district)} %>% 
@@ -183,7 +148,9 @@ server <- function(input, output, session) {
                                              `Facilities Count` = n) %>%
                                       ggplot(aes(x=`Facilties Type`, y=`Facilities Count`)) +
                                       geom_bar(width = 0.8,position = position_dodge(width=0.2),stat = 'identity', fill = '#00BFC4') + 
-                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Public Facilities by Facility Type") )
+                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Public Facilities by Facility Type") 
+                                    )
+    
     output$parks <- renderPlot(parks_summary %>% 
                                       as_tibble() %>% 
                                    {if (input$district == 'All') as_tibble(parks_summary) else filter(as_tibble(parks_summary),Council_Me == input$district)} %>% 
@@ -191,7 +158,9 @@ server <- function(input, output, session) {
                                              `Parks Count` = n) %>%
                                       ggplot(aes(x=`Parks Type`, y=`Parks Count`)) +
                                       geom_bar(width = 0.8,position = position_dodge(width=0.2),stat = 'identity', fill = '#00BFC4') + 
-                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Parks by Park Type") )
+                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Parks by Park Type") 
+                               )
+    
     output$schools <- renderPlot(school_summary %>% 
                                       as_tibble() %>% 
                                      {if (input$district == 'All') as_tibble(school_summary) else filter(as_tibble(school_summary),Council_Me == input$district)} %>% 
@@ -199,9 +168,11 @@ server <- function(input, output, session) {
                                              `School Count` = n) %>%
                                       ggplot(aes(x=`School Type`, y=`School Count`)) +
                                       geom_bar(width = 0.8,position = position_dodge(width=0.2),stat = 'identity', fill = '#00BFC4') + 
-                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Private and Public Schools") )
+                                      scale_color_brewer(palette = "PuOr") + ggtitle("Number of Private and Public Schools") 
+                                 )
     
     
+    ## Reactive spatial data for map tab 
     filtered_demographics_sf <- reactive({
         if (input$district == 'All') filter(demographics_sf, Dist != 0)  else filter(demographics_sf, Council_Me == input$district)
     })
@@ -210,6 +181,7 @@ server <- function(input, output, session) {
         bus_in_district_sf %>% filter(business_type %in% input$map_bus_type)
     })
     
+    ### Map Tab - Eli
     output$map <- renderLeaflet({
         
         leaflet(options = leafletOptions(minZoom = 11, maxZoom = 17)) %>%
@@ -242,12 +214,13 @@ server <- function(input, output, session) {
         
         })
     
+    ## Event triggers adding or removing population density legend when turned on/off
     observe({
         proxy <- leafletProxy("map", data = filtered_demographics_sf())
         
         proxy %>% clearGroup('dens_legend')
         if (input$map_density == 'Yes') {
-            proxy %>% addLegend(group = 'dens_legend', position = 'bottomleft', title = "Pop Per Sq. Meter",
+            proxy %>% addLegend(group = 'dens_legend', position = 'bottomleft', title = "Pop Per Sq. Mile",
                                 pal = pop_pal, values = c('1000', '1500', '2000', '2500', '3000', '3500', '4000', '4500')) 
         }
     })
